@@ -216,7 +216,7 @@ export async function handleCommentsRequest(request: Request, env: Env): Promise
     const adminPath = url.pathname.replace('/api/admin/comments', '');
     
     // GET /api/admin/comments
-    if (request.method === 'GET' && adminPath === '/') {
+    if (request.method === 'GET' && (adminPath === '/' || adminPath === '')) {
       return handleListAdmin(request, env);
     }
     
