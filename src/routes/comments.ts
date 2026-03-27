@@ -2,6 +2,8 @@
  * Comments API - Public comment submission and admin review
  */
 
+import { getSessionUser } from '../middleware/auth';
+
 const SPAM_KEYWORDS = [
   'buy now', 'click here', 'free money', 'casino', 'viagra',
   'cryptocurrency', 'forex', 'investment opportunity', 'lottery',
@@ -55,9 +57,17 @@ function getGravatarUrl(email: string): string {
   return `https://www.gravatar.com/avatar/${hash}?d=identicon&s=80`;
 }
 
-function requireAuth(request: Request, env: Env): boolean {
+async function adminAuth(request: Request, env: Env) {
+  // Try session auth first (JWT-equivalent for browser clients)
+  const sessionUser = await getSessionUser(request, env.DB);
+  if (sessionUser) return sessionUser;
+  // Fallback to API_SECRET for programmatic clients (backwards compat)
   const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-  return token === env.API_SECRET;
+  if (token === env.API_SECRET) {
+    // Return a minimal user object for API_SECRET auth
+    return { id: 'api', username: 'api', email: '', displayName: 'API Client', role: 'admin' };
+  }
+  return null;
 }
 
 function jsonResponse(data: unknown, status = 200): Response {
@@ -148,7 +158,8 @@ async function handleGetByPost(request: Request, env: Env, slug: string): Promis
 
 // GET /api/admin/comments - List all comments (admin)
 async function handleListAdmin(request: Request, env: Env): Promise<Response> {
-  if (!requireAuth(request, env)) return jsonResponse({ error: 'Unauthorized' }, 401);
+  const user = await adminAuth(request, env);
+  if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
   
   const url = new URL(request.url);
   const status = url.searchParams.get('status'); // pending | approved | spam
