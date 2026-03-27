@@ -13,6 +13,7 @@ import { handleRevisionsRequest } from './routes/revisions';
 import { handleSearchRequest } from './routes/search';
 import { handleMediaRequest } from './routes/media';
 import { handleCommentsRequest } from './routes/comments';
+import { handlePostsRequest } from './routes/posts';
 
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
@@ -53,6 +54,9 @@ export default {
 		}
 		if (url.pathname.startsWith('/api/search')) {
 			return await handleSearchRequest(request, env);
+		}
+		if (url.pathname.startsWith('/api/posts')) {
+			return await handlePostsRequest(request, env);
 		}
 		if (url.pathname.startsWith('/api/comments') || url.pathname.startsWith('/api/admin/comments')) {
 			return await handleCommentsRequest(request, env);
