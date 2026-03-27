@@ -163,3 +163,18 @@ CREATE TABLE IF NOT EXISTS backlinks (
 
 CREATE INDEX IF NOT EXISTS idx_backlinks_source ON backlinks(source_post_id);
 CREATE INDEX IF NOT EXISTS idx_backlinks_target ON backlinks(target_post_id);
+
+-- Post revisions / 版本历史
+CREATE TABLE IF NOT EXISTS post_revisions (
+    id TEXT PRIMARY KEY,
+    post_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    version_number INTEGER NOT NULL,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+    created_by TEXT,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_revisions_post ON post_revisions(post_id);
+CREATE INDEX IF NOT EXISTS idx_revisions_created ON post_revisions(created_at DESC);
