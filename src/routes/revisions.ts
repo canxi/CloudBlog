@@ -41,6 +41,9 @@ async function handleList(request: Request, env: Env): Promise<Response> {
 
 // GET /api/revisions/:postId/:revisionId - Get specific revision
 async function handleGet(request: Request, env: Env): Promise<Response> {
+  if (!requireAuth(request, env)) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const url = new URL(request.url);
   const parts = url.pathname.split('/');
   const postId = parts[parts.length - 2];
@@ -68,6 +71,9 @@ async function handleGet(request: Request, env: Env): Promise<Response> {
 
 // GET /api/revisions/:postId/:revId/diff/:compareId - Compare two revisions
 async function handleDiff(request: Request, env: Env): Promise<Response> {
+  if (!requireAuth(request, env)) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const url = new URL(request.url);
   const parts = url.pathname.split('/');
   const revId1 = parts[parts.length - 2];
