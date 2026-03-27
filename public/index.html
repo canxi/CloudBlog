@@ -139,7 +139,8 @@
       try {
         const res = await fetch('/api/posts');
         if (!res.ok) throw new Error('Failed to load');
-        const posts = await res.json();
+        const data = await res.json();
+        const posts = Array.isArray(data) ? data : (data.posts || []);
         renderPosts(posts);
       } catch {
         // Try to load from cache
@@ -167,9 +168,9 @@
       }
       container.innerHTML = posts.map(post => `
         <article class="post-card">
-          ${post.cover_image ? `<img src="${post.cover_image}" alt="" class="post-cover" loading="lazy">` : ''}
+          ${post.coverImage ? `<img src="${post.coverImage}" alt="" class="post-cover" loading="lazy">` : ''}
           <h2><a href="/posts/${post.slug}">${escapeHtml(post.title)}</a></h2>
-          <div class="post-meta">${formatDate(post.published_at)} · ${post.categories?.map(c => c.name).join(', ') || ''}</div>
+          <div class="post-meta">${formatDate(post.publishedAt)} · ${post.categories?.map(c => c.name).join(', ') || ''}</div>
           <p class="post-excerpt">${escapeHtml(post.excerpt || '')}</p>
         </article>
       `).join('');
