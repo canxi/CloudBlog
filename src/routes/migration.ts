@@ -184,6 +184,10 @@ async function handleProgress(request: Request, env: Env): Promise<Response> {
 
 // GET /api/migration/batches - List all batches
 async function handleListBatches(request: Request, env: Env): Promise<Response> {
+  const auth = requireAuth(request, env);
+  if (!auth) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const tracker = new ImportProgressTracker(env.IMPORT_KV);
   const batches = await tracker.listBatches(20);
   return Response.json(batches);
