@@ -54,7 +54,7 @@ export default {
 		if (url.pathname.startsWith('/api/search')) {
 			return await handleSearchRequest(request, env);
 		}
-		if (url.pathname.startsWith('/api/comments')) {
+		if (url.pathname.startsWith('/api/comments') || url.pathname.startsWith('/api/admin/comments')) {
 			return await handleCommentsRequest(request, env);
 		}
 		if (url.pathname.startsWith('/api/admin/media')) {
