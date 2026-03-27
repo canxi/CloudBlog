@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CloudBlog Article">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.2.0/github-markdown.min.css">
+  <style>
+    :root {
+      --primary: #3b82f6;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-secondary: #64748b;
+      --border: #e2e8f0;
+      --code-bg: #f1f5f9;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh;
+      line-height: 1.7;
+    }
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Header ── */
+    header {
+      background: rgba(255,255,255,0.9); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border); padding: 0 24px;
+      height: 64px; display: flex; align-items: center;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .header-brand span { font-size: 18px; font-weight: 700; color: var(--text); }
+    .back-link { margin-left: auto; color: var(--text-secondary); font-size: 14px; display: flex; align-items: center; gap: 4px; }
+    .back-link:hover { color: var(--primary); text-decoration: none; }
+
+    /* ── Article ── */
+    article { max-width: 760px; margin: 0 auto; padding: 40px 24px 80px; }
+    .article-header { margin-bottom: 32px; }
+    .article-title { font-size: clamp(24px, 5vw, 36px); font-weight: 800; line-height: 1.2; margin-bottom: 16px; color: var(--text); }
+    .article-meta { display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--text-secondary); flex-wrap: wrap; }
+    .article-meta .dot { width: 3px; height: 3px; background: var(--text-secondary); border-radius: 50%; }
+    .article-cover { width: 100%; max-height: 400px; object-fit: cover; border-radius: 12px; margin-bottom: 32px; }
+    .article-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+    .tag {
+      font-size: 12px; padding: 4px 12px; border-radius: 20px;
+      background: #eff6ff; color: #1e40af; font-weight: 500;
+    }
+    .article-body { font-size: 16px; }
+    .article-body .markdown-body { font-size: 16px; line-height: 1.8; }
+    .article-body .markdown-body img { max-width: 100%; border-radius: 8px; }
+    .article-body .markdown-body pre { background: var(--code-bg); border-radius: 8px; padding: 16px; overflow-x: auto; }
+    .article-body .markdown-body code { font-family: 'SF Mono', 'Consolas', monospace; font-size: 14px; }
+    .article-body .markdown-body blockquote { border-left: 4px solid var(--primary); padding-left: 16px; color: var(--text-secondary); margin: 16px 0; }
+
+    /* ── Comments ── */
+    .comments-section { margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--border); }
+    .comments-title { font-size: 18px; font-weight: 700; margin-bottom: 24px; }
+    .comment-form { margin-bottom: 32px; }
+    .comment-form h4 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+    .comment-input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 80px; margin-bottom: 8px; }
+    .comment-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+    .comment-meta { display: flex; gap: 8px; margin-bottom: 8px; }
+    .comment-meta input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; }
+    .comment-meta input:focus { outline: none; border-color: var(--primary); }
+    .btn { padding: 8px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .comments-list { display: flex; flex-direction: column; gap: 16px; }
+    .comment-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+    .comment-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .comment-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--code-bg); }
+    .comment-author { font-weight: 600; font-size: 14px; }
+    .comment-date { font-size: 12px; color: var(--text-secondary); margin-left: auto; }
+    .comment-content { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+    .comment-status { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
+    .comment-status.pending { background: #fef3c7; color: #92400e; }
+    .comment-status.spam { background: #fee2e2; color: #991b1b; }
+
+    /* ── Loading/Error/Empty ── */
+    .loading { text-align: center; padding: 80px 20px; color: var(--text-secondary); }
+    .error-state { text-align: center; padding: 80px 20px; }
+    .error-state h3 { margin-bottom: 8px; }
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
+
+    /* ── Toast ── */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #0f172a; color: white; padding: 10px 24px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 200; white-space: nowrap; }
+    .toast.show { opacity: 1; }
+
+    @media (max-width: 640px) {
+      article { padding: 24px 16px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="header-brand">
+    <span>📝 CloudBlog</span>
+  </a>
+  <a href="/" class="back-link">← 返回首页</a>
+</header>
+
+<main>
+  <article>
+    <!-- Loading -->
+    <div id="loading" class="loading">加载中...</div>
+
+    <!-- Error -->
+    <div id="error" class="error-state" style="display:none">
+      <h3>文章不存在</h3>
+      <p style="color:var(--text-secondary);margin:8px 0 16px">找不到这篇文章，可能已被删除或链接错误</p>
+      <a href="/" class="btn btn-primary">返回首页</a>
+    </div>
+
+    <!-- Article content -->
+    <div id="content" style="display:none">
+      <div class="article-header">
+        <h1 class="article-title" id="title"></h1>
+        <div class="article-meta">
+          <span id="author"></span>
+          <span class="dot"></span>
+          <span id="date"></span>
+          <span class="dot"></span>
+          <span id="readtime"></span>
+        </div>
+        <div class="article-tags" id="tags"></div>
+      </div>
+      <img id="cover" class="article-cover" style="display:none" alt="">
+      <div class="article-body">
+        <div id="postContent" class="markdown-body"></div>
+      </div>
+
+      <!-- Comments -->
+      <div class="comments-section">
+        <h3 class="comments-title">💬 评论</h3>
+        <div class="comment-form" id="commentForm">
+          <h4>发表评论</h4>
+          <div class="comment-meta">
+            <input type="text" id="commentAuthor" placeholder="昵称" maxlength="100">
+            <input type="email" id="commentEmail" placeholder="邮箱（不公开）" maxlength="254">
+          </div>
+          <textarea id="commentContent" class="comment-input" placeholder="写下你的评论..." maxlength="2000"></textarea>
+          <button class="btn btn-primary" id="submitComment" onclick="submitComment()">发表评论</button>
+        </div>
+        <div id="commentsList" class="comments-list"></div>
+      </div>
+    </div>
+  </article>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // Extract slug from URL path like /posts/my-slug
+  function getSlugFromPath() {
+    const match = window.location.pathname.match(/^\/posts\/([^\/]+)/);
+    return match ? match[1] : null;
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function formatDate(ts) {
+    if (!ts) return '';
+    const d = new Date(ts > 1e12 ? ts : ts * 1000);
+    return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
+  function renderMarkdown(content) {
+    if (!content) return '';
+    // Simple markdown rendering
+    let html = escapeHtml(content);
+    // Code blocks
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+      return `<pre><code class="language-${lang}">${code.trim()}</code></pre>`;
+    });
+    // Inline code
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // Bold
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    // Italic
+    html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    // Headings
+    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+    // Blockquote
+    html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+    // Lists
+    html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+    // Paragraphs (double newline)
+    html = html.replace(/\n\n+/g, '</p><p>');
+    // Single newlines in paragraphs
+    html = html.replace(/\n/g, '<br>');
+    return `<p>${html}</p>`;
+  }
+
+  let currentPost = null;
+  let currentSlug = null;
+
+  async function loadPost() {
+    const slug = getSlugFromPath();
+    if (!slug) {
+      showError();
+      return;
+    }
+    currentSlug = slug;
+
+    try {
+      const res = await fetch(`/api/posts/${encodeURIComponent(slug)}`);
+      if (!res.ok) {
+        showError();
+        return;
+      }
+      const post = await res.json();
+      currentPost = post;
+      renderPost(post);
+      loadComments(slug);
+    } catch (e) {
+      showError();
+    }
+  }
+
+  function showError() {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+  }
+
+  function renderPost(post) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+
+    document.getElementById('title').textContent = post.title;
+    document.getElementById('author').textContent = '👤 ' + (post.author?.name || 'Unknown');
+    document.getElementById('date').textContent = '📅 ' + formatDate(post.publishedAt || post.createdAt);
+    document.getElementById('readtime').textContent = '⏱️ ' + estimateReadTime(post.content) + ' 分钟';
+    document.getElementById('postContent').innerHTML = renderMarkdown(post.content);
+
+    if (post.coverImage) {
+      const cover = document.getElementById('cover');
+      cover.src = post.coverImage;
+      cover.style.display = 'block';
+    }
+
+    // Tags
+    if (post.tags && post.tags.length > 0) {
+      document.getElementById('tags').innerHTML = post.tags.map(t =>
+        `<span class="tag">${escapeHtml(t.name || t)}</span>`
+      ).join('');
+    }
+
+    // Update page title
+    document.title = post.title + ' - CloudBlog';
+    document.querySelector('meta[name="description"]').content = post.excerpt || post.title;
+  }
+
+  function estimateReadTime(content) {
+    if (!content) return 1;
+    const words = content.trim().split(/\s+/).length;
+    return Math.max(1, Math.ceil(words / 200));
+  }
+
+  async function loadComments(slug) {
+    try {
+      const res = await fetch(`/api/comments?post=${encodeURIComponent(slug)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const comments = Array.isArray(data) ? data : (data.comments || []);
+      renderComments(comments.filter(c => c.status === 'approved'));
+    } catch (e) {
+      // silently fail
+    }
+  }
+
+  function renderComments(comments) {
+    const container = document.getElementById('commentsList');
+    if (comments.length === 0) {
+      container.innerHTML = '<div class="empty-state">还没有评论，来抢沙发吧！</div>';
+      return;
+    }
+    container.innerHTML = comments.map(c => `
+      <div class="comment-item">
+        <div class="comment-header">
+          <img src="${c.avatar || 'https://www.gravatar.com/avatar/0?d=identicon&s=80'}" class="comment-avatar" alt="">
+          <span class="comment-author">${escapeHtml(c.author)}</span>
+          <span class="comment-date">${formatDate(c.createdAt)}</span>
+        </div>
+        <div class="comment-content">${escapeHtml(c.content)}</div>
+      </div>
+    `).join('');
+  }
+
+  async function submitComment() {
+    const author = document.getElementById('commentAuthor').value.trim();
+    const email = document.getElementById('commentEmail').value.trim();
+    const content = document.getElementById('commentContent').value.trim();
+
+    if (!author || !email || !content) {
+      showToast('请填写昵称、邮箱和评论内容');
+      return;
+    }
+
+    const btn = document.getElementById('submitComment');
+    btn.disabled = true;
+    btn.textContent = '提交中...';
+
+    try {
+      const res = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postSlug: currentSlug, author, email, content })
+      });
+
+      if (res.ok) {
+        showToast('评论已提交，等待审核');
+        document.getElementById('commentContent').value = '';
+      } else {
+        const err = await res.json();
+        showToast(err.error || '提交失败');
+      }
+    } catch (e) {
+      showToast('网络错误，请重试');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '发表评论';
+    }
+  }
+
+  // Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+
+  loadPost();
+</script>
+</body>
+</html>

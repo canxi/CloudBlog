@@ -145,6 +145,28 @@ export default {
 			}
 		}
 
+		// Serve post.html for /posts/:slug routes (article detail page)
+		if (url.pathname.startsWith('/posts/')) {
+			const postRes = await fetch(`https://${url.hostname}/post.html`);
+			if (postRes.ok) {
+				const headers = new Headers({ 'Content-Type': 'text/html; charset=utf-8' });
+				addSecurityHeaders(headers);
+				headers.set('Cache-Control', 'no-cache');
+				return new Response(postRes.body, { status: 200, headers });
+			}
+		}
+
+		// Post detail route: serve post.html for /posts/:slug
+		if (url.pathname.startsWith('/posts/')) {
+			const postRes = await fetch(`https://${url.hostname}/post.html`);
+			if (postRes.ok) {
+				const headers = new Headers({ 'Content-Type': 'text/html; charset=utf-8' });
+				addSecurityHeaders(headers);
+				headers.set('Cache-Control', 'no-cache');
+				return new Response(postRes.body, { status: 200, headers });
+			}
+		}
+
 		// SPA fallback: serve index.html for all other routes
 		const indexRes = await fetch(`https://${url.hostname}/index.html`);
 		if (indexRes.ok) {
