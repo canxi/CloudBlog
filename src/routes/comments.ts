@@ -201,7 +201,7 @@ export async function handleCommentsRequest(request: Request, env: Env): Promise
   const pathname = url.pathname.replace('/api/comments', '');
   
   // POST /api/comments - submit
-  if (request.method === 'POST' && pathname === '/') {
+  if (request.method === 'POST' && (pathname === '/' || pathname === '')) {
     return handleSubmit(request, env);
   }
   

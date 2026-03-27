@@ -23,7 +23,7 @@
 		{
 			"binding": "DB",
 			"database_name": "cloudblog-db",
-			"database_id": "<your-database-id>"
+			"database_id": "4cc7dce4-1285-41a0-80ba-319759c59456"
 		}
 	],
 	// R2 bucket for image storage
@@ -37,19 +37,15 @@
 	"kv_namespaces": [
 		{
 			"binding": "IMPORT_KV",
-			"id": "<your-kv-namespace-id>"
+			"id": "80a035bc87e041848297f47b2e4c03e5"
 		},
 		{
 			"binding": "ANALYTICS_KV",
-			"id": "<your-analytics-kv-namespace-id>"
+			"id": "f45f55380661453dbab55564073ad007"
 		},
 		{
 			"binding": "SEARCH_KV",
-			"id": "<your-search-kv-namespace-id>"
+			"id": "ab7e944d29e245c694342fb877c72f91"
 		}
-	],
-	// Public URL for R2 (set via R2_PUBLIC_URL env var)
-	// "vars": {
-	// 	"R2_PUBLIC_URL": "https://your-r2-account.r2.cloudflarestorage.com/cloudblog-images"
-	// }
+	]
 }
