@@ -13,6 +13,9 @@ function requireAuth(request: Request, env: Env): boolean {
 
 // GET /api/revisions/:postId - List revisions for a post
 async function handleList(request: Request, env: Env): Promise<Response> {
+  if (!requireAuth(request, env)) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const url = new URL(request.url);
   const postId = url.pathname.split('/').pop();
 

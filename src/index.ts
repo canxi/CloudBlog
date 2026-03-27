@@ -14,26 +14,56 @@ import { handleSearchRequest } from './routes/search';
 import { handleMediaRequest } from './routes/media';
 import { handleCommentsRequest } from './routes/comments';
 import { handlePostsRequest } from './routes/posts';
+import { handleCORS, checkRateLimit, getCorsHeaders } from './utils/security';
 
 const STATIC_EXTENSIONS = ['.js', '.css', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.woff', '.woff2', '.ttf', '.eot', '.map'];
+
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+};
 
 function isStaticAsset(pathname: string): boolean {
   return STATIC_EXTENSIONS.some(ext => pathname.includes(ext));
 }
 
+function addSecurityHeaders(headers: Headers): void {
+  for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+    headers.set(key, value);
+  }
+}
+
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const url = new URL(request.url);
+		const origin = request.headers.get('Origin');
 
-		// CORS headers
-		const corsHeaders = {
-			'Access-Control-Allow-Origin': '*',
-			'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-			'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-		};
+		// Handle CORS preflight
+		const corsPreflight = handleCORS(request);
+		if (corsPreflight) {
+			const headers = new Headers();
+			addSecurityHeaders(headers);
+			for (const [k, v] of Object.entries(getCorsHeaders(origin))) {
+				headers.set(k, v);
+			}
+			return new Response(corsPreflight.body, { status: corsPreflight.status, headers });
+		}
 
-		if (request.method === 'OPTIONS') {
-			return new Response(null, { headers: corsHeaders });
+		// Rate limit all API routes
+		if (url.pathname.startsWith('/api/')) {
+			const rate = await checkRateLimit(request, env, 120, 60);
+			if (!rate.allowed) {
+				const headers = new Headers({ 'Content-Type': 'application/json' });
+				addSecurityHeaders(headers);
+				for (const [k, v] of Object.entries(getCorsHeaders(origin))) {
+					headers.set(k, v);
+				}
+				headers.set('Retry-After', String(rate.resetIn));
+				return new Response(JSON.stringify({ error: 'Too many requests', retryAfter: rate.resetIn }), { status: 429, headers });
+			}
 		}
 
 		// API routes
@@ -73,28 +103,31 @@ export default {
 
 		// Health check
 		if (url.pathname === '/health') {
-			return Response.json({ status: 'ok', timestamp: Date.now() });
+			const headers = new Headers({ 'Content-Type': 'application/json' });
+			addSecurityHeaders(headers);
+			return new Response(JSON.stringify({ status: 'ok', timestamp: Date.now() }), { status: 200, headers });
 		}
 
 		// 404 for API
 		if (url.pathname.startsWith('/api/')) {
-			return Response.json({ error: 'Not found' }, { status: 404 });
+			const headers = new Headers({ 'Content-Type': 'application/json' });
+			addSecurityHeaders(headers);
+			for (const [k, v] of Object.entries(getCorsHeaders(origin))) {
+				headers.set(k, v);
+			}
+			return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers });
 		}
 
 		// For static assets (JS, CSS, images), fetch from self
 		if (isStaticAsset(url.pathname)) {
-			const origin = `https://${url.hostname}`;
-			const assetUrl = `${origin}${url.pathname}`;
+			const assetUrl = `https://${url.hostname}${url.pathname}`;
 			try {
 				const assetRes = await fetch(assetUrl, request);
 				if (assetRes.ok) {
-					return new Response(assetRes.body, {
-						status: assetRes.status,
-						headers: {
-							...Object.fromEntries(assetRes.headers.entries()),
-							'Cache-Control': 'public, max-age=31536000, immutable',
-						},
-					});
+					const headers = new Headers(assetRes.headers);
+					addSecurityHeaders(headers);
+					headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+					return new Response(assetRes.body, { status: assetRes.status, headers });
 				}
 			} catch {
 				// fall through to 404
@@ -103,41 +136,24 @@ export default {
 
 		// Serve write.html for /write route (post editor)
 		if (url.pathname === '/write') {
-			const origin = url.hostname;
-			try {
-				const writeRes = await fetch(`https://${origin}/write.html`);
-				if (writeRes.ok) {
-					return new Response(writeRes.body, {
-						status: 200,
-						headers: {
-							'Content-Type': 'text/html; charset=utf-8',
-							'Cache-Control': 'no-cache',
-						},
-					});
-				}
-			} catch {
-				// fall through
+			const writeRes = await fetch(`https://${url.hostname}/write.html`);
+			if (writeRes.ok) {
+				const headers = new Headers({ 'Content-Type': 'text/html; charset=utf-8' });
+				addSecurityHeaders(headers);
+				headers.set('Cache-Control', 'no-cache');
+				return new Response(writeRes.body, { status: 200, headers });
 			}
 		}
 
 		// SPA fallback: serve index.html for all other routes
-		// Use a synthetic request to avoid infinite loop
-		const origin = url.hostname;
-		try {
-			const indexRes = await fetch(`https://${origin}/index.html`);
-			if (indexRes.ok) {
-				return new Response(indexRes.body, {
-					status: 200,
-					headers: {
-						'Content-Type': 'text/html; charset=utf-8',
-						'Cache-Control': 'no-cache',
-					},
-				});
-			}
-		} catch {
-			// fall through
+		const indexRes = await fetch(`https://${url.hostname}/index.html`);
+		if (indexRes.ok) {
+			const headers = new Headers({ 'Content-Type': 'text/html; charset=utf-8' });
+			addSecurityHeaders(headers);
+			headers.set('Cache-Control', 'no-cache');
+			return new Response(indexRes.body, { status: 200, headers });
 		}
 
-		return Response.json({ error: 'Not found' }, { status: 404 });
+		return new Response('Not Found', { status: 404 });
 	},
 } satisfies ExportedHandler<Env>;

@@ -20,6 +20,30 @@ interface Comment {
   userAgent?: string;
 }
 
+// Rate limit: max 10 comments per IP per hour
+const COMMENT_RATE_KEY = 'cmt:rate:';
+const COMMENT_RATE_MAX = 10;
+const COMMENT_RATE_WINDOW = 3600; // 1 hour
+
+async function checkCommentRate(request: Request, env: Env): Promise<boolean> {
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const key = `${COMMENT_RATE_KEY}${ip}`;
+  try {
+    const stored = await env.IMPORT_KV.get(key, 'json') as { count: number; resetAt: number } | null;
+    const now = Math.floor(Date.now() / 1000);
+    if (!stored || now > stored.resetAt) {
+      await env.IMPORT_KV.put(key, JSON.stringify({ count: 1, resetAt: now + COMMENT_RATE_WINDOW }), { expirationTtl: COMMENT_RATE_WINDOW + 10 });
+      return true;
+    }
+    if (stored.count >= COMMENT_RATE_MAX) return false;
+    stored.count++;
+    await env.IMPORT_KV.put(key, JSON.stringify(stored), { expirationTtl: stored.resetAt - now + 10 });
+    return true;
+  } catch {
+    return true; // fail open
+  }
+}
+
 function isSpam(content: string, author: string): boolean {
   const text = (content + ' ' + author).toLowerCase();
   return SPAM_KEYWORDS.some(kw => text.includes(kw));
@@ -42,6 +66,12 @@ function jsonResponse(data: unknown, status = 200): Response {
 
 // POST /api/comments - Submit a comment (public)
 async function handleSubmit(request: Request, env: Env): Promise<Response> {
+  // Rate limit
+  const allowed = await checkCommentRate(request, env);
+  if (!allowed) {
+    return jsonResponse({ error: 'Too many comments. Please wait before posting again.' }, 429);
+  }
+
   let body: { postSlug?: string; author?: string; email?: string; content?: string };
   try {
     body = await request.json();

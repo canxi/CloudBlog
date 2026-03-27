@@ -136,6 +136,12 @@ async function handleCreate(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ error: 'Unauthorized' }, 401);
   }
 
+  // Body size limit
+  const contentLength = request.headers.get('content-length');
+  if (contentLength && parseInt(contentLength) > 2 * 1024 * 1024) {
+    return jsonResponse({ error: 'Request body too large (max 2MB)' }, 413);
+  }
+
   let body: {
     title?: string;
     slug?: string;
@@ -159,7 +165,9 @@ async function handleCreate(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ error: 'title and content are required' }, 400);
   }
 
-  const postSlug = slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const postSlug = slug
+    ? slug.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/(^-|-$)/g, '').slice(0, 100)
+    : title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 100);
   const postId = crypto.randomUUID();
   const now = Math.floor(Date.now() / 1000);
   const publishedAt = status === 'published' ? now : null;
