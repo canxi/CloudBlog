@@ -101,6 +101,25 @@ export default {
 			}
 		}
 
+		// Serve write.html for /write route (post editor)
+		if (url.pathname === '/write') {
+			const origin = url.hostname;
+			try {
+				const writeRes = await fetch(`https://${origin}/write.html`);
+				if (writeRes.ok) {
+					return new Response(writeRes.body, {
+						status: 200,
+						headers: {
+							'Content-Type': 'text/html; charset=utf-8',
+							'Cache-Control': 'no-cache',
+						},
+					});
+				}
+			} catch {
+				// fall through
+			}
+		}
+
 		// SPA fallback: serve index.html for all other routes
 		// Use a synthetic request to avoid infinite loop
 		const origin = url.hostname;
