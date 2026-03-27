@@ -6,6 +6,7 @@
 import { handleMigrationRequest } from './routes/migration';
 import { handleAnalyticsRequest } from './routes/analytics';
 import { handleExportRequest } from './routes/export';
+import { handleSnippetsRequest } from './routes/snippets';
 
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
@@ -31,6 +32,9 @@ export default {
 		}
 		if (url.pathname.startsWith('/api/export')) {
 			return await handleExportRequest(request, env);
+		}
+		if (url.pathname.startsWith('/api/snippets')) {
+			return await handleSnippetsRequest(request, env);
 		}
 
 		// Health check

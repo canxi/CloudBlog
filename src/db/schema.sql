@@ -114,3 +114,22 @@ CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id);
 CREATE INDEX IF NOT EXISTS idx_comments_status ON comments(status);
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
+
+-- Snippets table for code snippets
+CREATE TABLE IF NOT EXISTS snippets (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    code TEXT NOT NULL,
+    language TEXT NOT NULL DEFAULT 'javascript',
+    tags TEXT, -- JSON array of tag names
+    author_id TEXT,
+    is_public INTEGER DEFAULT 1,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+    updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_snippets_language ON snippets(language);
+CREATE INDEX IF NOT EXISTS idx_snippets_author ON snippets(author_id);
+CREATE INDEX IF NOT EXISTS idx_snippets_public ON snippets(is_public);

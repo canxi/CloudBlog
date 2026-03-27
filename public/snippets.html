@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>代码片段库 - CloudBlog</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; }
+    header { background: #161b22; border-bottom: 1px solid #30363d; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 18px; }
+    header a { color: #58a6ff; text-decoration: none; font-size: 14px; }
+    main { max-width: 1000px; margin: 0 auto; padding: 24px; }
+    .controls { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+    .search { flex: 1; min-width: 200px; }
+    .search input { width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: #e6edf3; font-size: 14px; }
+    .filters { display: flex; gap: 8px; }
+    select, button { padding: 8px 16px; border-radius: 6px; border: 1px solid #30363d; background: #21262d; color: #e6edf3; cursor: pointer; font-size: 14px; }
+    button.primary { background: #238636; border-color: #238636; }
+    button.primary:hover { background: #2ea043; }
+    .snippet-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+    .snippet-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .snippet-title { font-size: 16px; font-weight: 600; color: #58a6ff; }
+    .snippet-lang { font-size: 12px; background: #388bfd26; color: #58a6ff; padding: 2px 8px; border-radius: 12px; }
+    .snippet-desc { font-size: 13px; color: #8b949e; margin-bottom: 12px; }
+    .snippet-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .tag { font-size: 11px; background: #30363d; padding: 2px 8px; border-radius: 12px; color: #8b949e; }
+    pre { background: #0d1117; border-radius: 6px; padding: 12px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+    pre code { font-family: 'Fira Code', 'Consolas', monospace !important; }
+    .snippet-actions { display: flex; gap: 8px; margin-top: 8px; }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .copy-btn { background: #30363d; border: none; color: #e6edf3; }
+    .copy-btn:hover { background: #484f58; }
+    .empty-state { text-align: center; padding: 60px; color: #8b949e; }
+    .create-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 100; }
+    .create-modal.show { display: flex; }
+    .modal-content { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 24px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+    .modal-content h2 { font-size: 20px; margin-bottom: 16px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 14px; margin-bottom: 6px; color: #8b949e; }
+    .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: #e6edf3; font-size: 14px; }
+    .form-group textarea { min-height: 120px; font-family: 'Fira Code', monospace; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📋 代码片段库</h1>
+    <a href="/">← 返回博客</a>
+  </header>
+
+  <main>
+    <div class="controls">
+      <div class="search">
+        <input type="text" id="searchInput" placeholder="搜索代码片段...">
+      </div>
+      <div class="filters">
+        <select id="langFilter">
+          <option value="">所有语言</option>
+          <option value="javascript">JavaScript</option>
+          <option value="typescript">TypeScript</option>
+          <option value="python">Python</option>
+          <option value="rust">Rust</option>
+          <option value="go">Go</option>
+          <option value="bash">Bash</option>
+          <option value="sql">SQL</option>
+          <option value="html">HTML</option>
+          <option value="css">CSS</option>
+          <option value="json">JSON</option>
+        </select>
+        <button class="primary" onclick="showCreateModal()">+ 新建片段</button>
+      </div>
+    </div>
+
+    <div id="snippetsList"></div>
+  </main>
+
+  <div class="create-modal" id="createModal">
+    <div class="modal-content">
+      <h2>新建代码片段</h2>
+      <div class="form-group">
+        <label>标题 *</label>
+        <input type="text" id="newTitle" placeholder="片段标题">
+      </div>
+      <div class="form-group">
+        <label>描述</label>
+        <input type="text" id="newDesc" placeholder="简短描述">
+      </div>
+      <div class="form-group">
+        <label>语言</label>
+        <select id="newLang">
+          <option value="javascript">JavaScript</option>
+          <option value="typescript">TypeScript</option>
+          <option value="python">Python</option>
+          <option value="rust">Rust</option>
+          <option value="go">Go</option>
+          <option value="bash">Bash</option>
+          <option value="sql">SQL</option>
+          <option value="html">HTML</option>
+          <option value="css">CSS</option>
+          <option value="json">JSON</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>代码 *</label>
+        <textarea id="newCode" placeholder="粘贴代码..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>标签（逗号分隔）</label>
+        <input type="text" id="newTags" placeholder="react, hooks, utility">
+      </div>
+      <div class="modal-actions">
+        <button onclick="hideCreateModal()">取消</button>
+        <button class="primary" onclick="createSnippet()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script>
+    let snippets = [];
+
+    async function loadSnippets() {
+      const lang = document.getElementById('langFilter').value;
+      const q = document.getElementById('searchInput').value;
+      let url = '/api/snippets?limit=50';
+      if (lang) url += '&language=' + lang;
+      if (q) url += '&q=' + encodeURIComponent(q);
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        snippets = data.snippets || [];
+        renderSnippets();
+      } catch (e) {
+        document.getElementById('snippetsList').innerHTML = '<div class="empty-state">加载失败，请稍后重试</div>';
+      }
+    }
+
+    function renderSnippets() {
+      const container = document.getElementById('snippetsList');
+      if (snippets.length === 0) {
+        container.innerHTML = '<div class="empty-state">暂无代码片段，创建一个吧！</div>';
+        return;
+      }
+      container.innerHTML = snippets.map(s => `
+        <div class="snippet-card">
+          <div class="snippet-header">
+            <span class="snippet-title">${escapeHtml(s.title)}</span>
+            <span class="snippet-lang">${s.language}</span>
+          </div>
+          ${s.description ? `<div class="snippet-desc">${escapeHtml(s.description)}</div>` : ''}
+          ${s.tags && s.tags.length > 0 ? `<div class="snippet-tags">${s.tags.map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+          <pre><code class="language-${s.language}">${escapeHtml(s.code)}</code></pre>
+          <div class="snippet-actions">
+            <button class="btn-sm copy-btn" onclick="copyCode(this, ${JSON.stringify(s.code).replace(/"/g, '&quot;')})">📋 复制</button>
+          </div>
+        </div>
+      `).join('');
+      Prism.highlightAll();
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function copyCode(btn, code) {
+      navigator.clipboard.writeText(code).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = '✅ 已复制';
+        setTimeout(() => btn.textContent = orig, 1500);
+      });
+    }
+
+    function showCreateModal() {
+      document.getElementById('createModal').classList.add('show');
+    }
+
+    function hideCreateModal() {
+      document.getElementById('createModal').classList.remove('show');
+    }
+
+    async function createSnippet() {
+      const title = document.getElementById('newTitle').value.trim();
+      const description = document.getElementById('newDesc').value.trim();
+      const language = document.getElementById('newLang').value;
+      const code = document.getElementById('newCode').value;
+      const tags = document.getElementById('newTags').value.split(',').map(t => t.trim()).filter(Boolean);
+
+      if (!title || !code) {
+        alert('标题和代码不能为空');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/snippets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, description, language, code, tags })
+        });
+        if (res.ok) {
+          hideCreateModal();
+          document.getElementById('newTitle').value = '';
+          document.getElementById('newDesc').value = '';
+          document.getElementById('newCode').value = '';
+          document.getElementById('newTags').value = '';
+          loadSnippets();
+        } else {
+          alert('创建失败');
+        }
+      } catch (e) {
+        alert('创建失败: ' + e.message);
+      }
+    }
+
+    document.getElementById('searchInput').addEventListener('input', debounce(loadSnippets, 300));
+    document.getElementById('langFilter').addEventListener('change', loadSnippets);
+
+    function debounce(fn, ms) {
+      let t;
+      return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+    }
+
+    loadSnippets();
+  </script>
+</body>
+</html>
