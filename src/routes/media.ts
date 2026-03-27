@@ -41,7 +41,8 @@ let mediaIdCounter = 1;
 const MEDIA_KEY_PREFIX = 'media:record:';
 
 async function handleList(request: Request, env: Env): Promise<Response> {
-  if (!requireAuth(request, env)) return errorResponse('Unauthorized', 401);
+  const user = await adminAuth(request, env);
+  if (!user) return errorResponse('Unauthorized', 401);
   
   const listStr = await env.IMPORT_KV.get('media:list');
   const list: string[] = listStr ? JSON.parse(listStr) : [];
@@ -58,7 +59,8 @@ async function handleList(request: Request, env: Env): Promise<Response> {
 }
 
 async function handleUpload(request: Request, env: Env): Promise<Response> {
-  if (!requireAuth(request, env)) return errorResponse('Unauthorized', 401);
+  const user = await adminAuth(request, env);
+  if (!user) return errorResponse('Unauthorized', 401);
   
   const contentType = request.headers.get('content-type') || '';
   if (!contentType.includes('multipart/form-data')) {
@@ -124,7 +126,8 @@ async function handleUpload(request: Request, env: Env): Promise<Response> {
 }
 
 async function handleDelete(request: Request, env: Env, id: string): Promise<Response> {
-  if (!requireAuth(request, env)) return errorResponse('Unauthorized', 401);
+  const user = await adminAuth(request, env);
+  if (!user) return errorResponse('Unauthorized', 401);
   
   const key = MEDIA_KEY_PREFIX + id;
   const item = await env.IMPORT_KV.get(key, 'json') as { key?: string } | null;

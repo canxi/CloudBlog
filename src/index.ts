@@ -156,17 +156,6 @@ export default {
 			}
 		}
 
-		// Post detail route: serve post.html for /posts/:slug
-		if (url.pathname.startsWith('/posts/')) {
-			const postRes = await fetch(`https://${url.hostname}/post.html`);
-			if (postRes.ok) {
-				const headers = new Headers({ 'Content-Type': 'text/html; charset=utf-8' });
-				addSecurityHeaders(headers);
-				headers.set('Cache-Control', 'no-cache');
-				return new Response(postRes.body, { status: 200, headers });
-			}
-		}
-
 		// Admin routes
 		if (url.pathname.startsWith('/admin')) {
 			let page = '/admin/index.html';

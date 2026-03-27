@@ -3,10 +3,16 @@
  */
 
 import { syncBacklinks } from './backlinks';
+import { getSessionUser } from '../middleware/auth';
 
-function requireAuth(request: Request, env: Env): boolean {
+async function adminAuth(request: Request, env: Env) {
+  const sessionUser = await getSessionUser(request, env.DB);
+  if (sessionUser) return sessionUser;
   const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-  return token === env.API_SECRET;
+  if (token === env.API_SECRET) {
+    return { id: 'api', username: 'api', email: '', displayName: 'API Client', role: 'admin' };
+  }
+  return null;
 }
 
 function jsonResponse(data: unknown, status = 200): Response {
@@ -132,9 +138,8 @@ async function handleGetBySlug(request: Request, env: Env, slug: string): Promis
 
 // POST /api/posts - Create post (admin)
 async function handleCreate(request: Request, env: Env): Promise<Response> {
-  if (!requireAuth(request, env)) {
-    return jsonResponse({ error: 'Unauthorized' }, 401);
-  }
+  const user = await adminAuth(request, env);
+  if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
 
   // Body size limit
   const contentLength = request.headers.get('content-length');
@@ -216,9 +221,8 @@ async function handleCreate(request: Request, env: Env): Promise<Response> {
 
 // PUT /api/posts/:slug - Update post (admin)
 async function handleUpdate(request: Request, env: Env, slug: string): Promise<Response> {
-  if (!requireAuth(request, env)) {
-    return jsonResponse({ error: 'Unauthorized' }, 401);
-  }
+  const user = await adminAuth(request, env);
+  if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
 
   const existing = await env.DB.prepare(`SELECT id FROM posts WHERE slug = ?`).bind(slug).first();
   if (!existing) {
@@ -277,9 +281,8 @@ async function handleUpdate(request: Request, env: Env, slug: string): Promise<R
 
 // DELETE /api/posts/:slug - Delete post (admin)
 async function handleDelete(request: Request, env: Env, slug: string): Promise<Response> {
-  if (!requireAuth(request, env)) {
-    return jsonResponse({ error: 'Unauthorized' }, 401);
-  }
+  const user = await adminAuth(request, env);
+  if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
 
   const existing = await env.DB.prepare(`SELECT id FROM posts WHERE slug = ?`).bind(slug).first();
   if (!existing) {
