@@ -275,6 +275,17 @@
 <div class="toast" id="toast"></div>
 
 <script>
+  // ── SPA Router ──
+  function getRoute() {
+    const path = window.location.pathname;
+    // Home: /
+    if (path === '/') return { page: 'home' };
+    // Post detail: /posts/:slug
+    const match = path.match(/^\/posts\/([^/]+)$/);
+    if (match) return { page: 'post', slug: match[1] };
+    return { page: 'home' };
+  }
+
   // ── Load posts ──
   async function loadPosts() {
     try {
@@ -304,6 +315,127 @@
         </div>`;
     }
   }
+
+  // ── Load single post ──
+  async function loadPost(slug) {
+    const main = document.getElementById('postsContainer') || document.querySelector('main');
+    main.innerHTML = `
+      <div style="text-align:center;padding:60px;color:#9ca3af;">
+        <div style="font-size:32px;margin-bottom:12px;">⏳</div>
+        <div>加载中...</div>
+      </div>`;
+
+    try {
+      const res = await fetch(`/api/posts/${encodeURIComponent(slug)}`);
+      if (!res.ok) throw new Error('Post not found');
+      const post = await res.json();
+      renderPost(post);
+    } catch (e) {
+      main.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">🔍</div>
+          <h3>文章不存在或已被删除</h3>
+          <p>可能已被作者移除</p>
+          <a href="/" class="empty-btn">← 返回首页</a>
+        </div>`;
+    }
+  }
+
+  // ── Render post detail ──
+  function renderPost(post) {
+    const main = document.getElementById('postsContainer') || document.querySelector('main');
+    const articleHtml = convertMarkdown ? simpleMarkdown(post.content) : escapeHtml(post.content);
+    const readingTime = estimateReadTime(post.content);
+
+    main.innerHTML = `
+      <article class="post-detail">
+        <div class="post-detail-header">
+          ${post.coverImage ? `<img src="${post.coverImage}" alt="" class="post-detail-cover">` : ''}
+          <h1 class="post-detail-title">${escapeHtml(post.title)}</h1>
+          <div class="post-detail-meta">
+            <span>👤 ${escapeHtml(post.author?.name || 'Anonymous')}</span>
+            <span class="dot"></span>
+            <span>📅 ${formatDate(post.publishedAt)}</span>
+            <span class="dot"></span>
+            <span>⏱️ ${readingTime} 分钟阅读</span>
+          </div>
+          ${(post.tags || []).length > 0 ? `
+          <div class="post-detail-tags">
+            ${post.tags.map(t => `<span class="tag">${escapeHtml(t.name || t)}</span>`).join('')}
+          </div>` : ''}
+        </div>
+        <div class="post-detail-content">${articleHtml}</div>
+        <div class="post-detail-footer">
+          <a href="/" class="back-btn">← 返回首页</a>
+        </div>
+      </article>
+      <div id="relatedComments"></div>
+      <style>
+        .post-detail { max-width: 720px; margin: 0 auto; }
+        .post-detail-header { margin-bottom: 32px; }
+        .post-detail-cover { width: 100%; max-height: 400px; object-fit: cover; border-radius: 16px; margin-bottom: 24px; }
+        .post-detail-title { font-size: clamp(24px, 5vw, 36px); font-weight: 800; color: var(--text); line-height: 1.2; margin-bottom: 16px; letter-spacing: -0.5px; }
+        .post-detail-meta { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--text-secondary); flex-wrap: wrap; margin-bottom: 16px; }
+        .post-detail-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+        .post-detail-content { font-size: 16px; line-height: 1.8; color: var(--text); }
+        .post-detail-content h1, .post-detail-content h2, .post-detail-content h3 { margin: 24px 0 12px; font-weight: 700; }
+        .post-detail-content h1 { font-size: 28px; }
+        .post-detail-content h2 { font-size: 22px; }
+        .post-detail-content h3 { font-size: 18px; }
+        .post-detail-content p { margin-bottom: 16px; }
+        .post-detail-content code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 14px; }
+        .post-detail-content pre { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 10px; overflow-x: auto; margin: 16px 0; }
+        .post-detail-content pre code { background: none; padding: 0; color: inherit; }
+        .post-detail-content blockquote { border-left: 4px solid var(--primary); padding: 12px 16px; background: #f8fafc; margin: 16px 0; border-radius: 0 8px 8px 0; }
+        .post-detail-content a { color: var(--primary); }
+        .post-detail-content img { max-width: 100%; border-radius: 8px; margin: 16px 0; }
+        .post-detail-content ul, .post-detail-content ol { padding-left: 24px; margin-bottom: 16px; }
+        .post-detail-content li { margin-bottom: 6px; }
+        .post-detail-content strong { font-weight: 700; }
+        .post-detail-footer { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border); }
+        .back-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.15s; }
+        .back-btn:hover { background: var(--surface); border-color: var(--primary); color: var(--primary); }
+      </style>`;
+
+    // Update header nav active state
+    document.querySelectorAll('.header-nav a').forEach(a => a.classList.remove('active'));
+  }
+
+  // ── Simple markdown converter ──
+  function simpleMarkdown(text) {
+    if (!text) return '';
+    return escapeHtml(text)
+      // Code blocks
+      .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+      // Inline code
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      // Bold
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      // Italic
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      // Headers
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+      // Links
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+      // Images
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">')
+      // Blockquote
+      .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+      // Paragraphs (double newline)
+      .split(/\n\n+/)
+      .map(p => {
+        p = p.trim();
+        if (!p) return '';
+        if (p.startsWith('<h') || p.startsWith('<pre') || p.startsWith('<blockquote')) return p;
+        if (p.startsWith('<ol') || p.startsWith('<ul')) return p;
+        return `<p>${p.replace(/\n/g, '<br>')}</p>`;
+      })
+      .join('\n');
+  }
+
+  const convertMarkdown = true; // toggle for simple markdown rendering
 
   function renderPosts(posts) {
     const container = document.getElementById('posts');
@@ -350,12 +482,22 @@
     return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
+  // ── Router init ──
+  async function init() {
+    const route = getRoute();
+    if (route.page === 'post') {
+      await loadPost(route.slug);
+    } else {
+      await loadPosts();
+    }
+  }
+
   // ── Service Worker ──
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
 
-  loadPosts();
+  init();
 </script>
 </body>
 </html>
