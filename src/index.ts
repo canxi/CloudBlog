@@ -10,6 +10,9 @@ import { handleSnippetsRequest } from './routes/snippets';
 import { handleNotesRequest } from './routes/notes';
 import { handleBacklinksRequest } from './routes/backlinks';
 import { handleRevisionsRequest } from './routes/revisions';
+import { handleSearchRequest } from './routes/search';
+import { handleMediaRequest } from './routes/media';
+import { handleCommentsRequest } from './routes/comments';
 
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
@@ -47,6 +50,15 @@ export default {
 		}
 		if (url.pathname.startsWith('/api/revisions')) {
 			return await handleRevisionsRequest(request, env);
+		}
+		if (url.pathname.startsWith('/api/search')) {
+			return await handleSearchRequest(request, env);
+		}
+		if (url.pathname.startsWith('/api/comments')) {
+			return await handleCommentsRequest(request, env);
+		}
+		if (url.pathname.startsWith('/api/admin/media')) {
+			return await handleMediaRequest(request, env);
 		}
 
 		// Health check

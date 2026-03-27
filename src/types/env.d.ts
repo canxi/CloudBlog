@@ -13,6 +13,9 @@ interface Env {
 	// KV for analytics
 	ANALYTICS_KV: KVNamespace;
 
+	// KV for search index
+	SEARCH_KV: KVNamespace;
+
 	// API secret for authentication
 	API_SECRET: string;
 

@@ -33,7 +33,7 @@
 			"bucket_name": "cloudblog-images"
 		}
 	],
-	// KV namespace for import progress tracking
+	// KV namespaces
 	"kv_namespaces": [
 		{
 			"binding": "IMPORT_KV",
@@ -42,6 +42,10 @@
 		{
 			"binding": "ANALYTICS_KV",
 			"id": "<your-analytics-kv-namespace-id>"
+		},
+		{
+			"binding": "SEARCH_KV",
+			"id": "<your-search-kv-namespace-id>"
 		}
 	],
 	// Public URL for R2 (set via R2_PUBLIC_URL env var)
