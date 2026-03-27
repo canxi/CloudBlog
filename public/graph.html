@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>知识图谱 - CloudBlog</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow: hidden; }
+    header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+      background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(8px);
+      color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;
+    }
+    header h1 { font-size: 16px; font-weight: 600; }
+    header a { color: #60a5fa; text-decoration: none; font-size: 14px; }
+    #graph { width: 100vw; height: 100vh; background: #0f172a; }
+    .node { cursor: pointer; }
+    .node circle { stroke: #fff; stroke-width: 1.5px; transition: stroke 0.2s; }
+    .node:hover circle { stroke: #60a5fa; stroke-width: 3px; }
+    .node text { fill: #e2e8f0; font-size: 12px; pointer-events: none; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+    .link { stroke: #334155; stroke-opacity: 0.6; }
+    .tooltip {
+      position: fixed; background: #1e293b; border: 1px solid #334155;
+      border-radius: 8px; padding: 12px; color: #e2e8f0; font-size: 13px;
+      pointer-events: none; z-index: 20; max-width: 300px; display: none;
+    }
+    .tooltip.show { display: block; }
+    .tooltip h3 { font-size: 14px; margin-bottom: 6px; color: #60a5fa; }
+    .tooltip p { color: #94a3b8; line-height: 1.4; }
+    .legend {
+      position: fixed; bottom: 20px; left: 20px; z-index: 10;
+      background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(8px);
+      border: 1px solid #334155; border-radius: 8px; padding: 12px;
+      color: #e2e8f0; font-size: 12px;
+    }
+    .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .stats {
+      position: fixed; top: 60px; right: 20px; z-index: 10;
+      background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(8px);
+      border: 1px solid #334155; border-radius: 8px; padding: 12px;
+      color: #e2e8f0; font-size: 12px;
+    }
+    .stats div { margin-bottom: 4px; }
+    .stats span { color: #60a5fa; font-weight: 600; }
+    .loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); color: #64748b; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🕸️ 知识图谱</h1>
+    <a href="/">← 返回博客</a>
+  </header>
+
+  <div id="graph"></div>
+  <div class="tooltip" id="tooltip">
+    <h3 id="tooltipTitle"></h3>
+    <p id="tooltipDesc"></p>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> 文章节点</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div> 链接关系</div>
+  </div>
+  <div class="stats" id="stats">
+    <div>节点：<span id="nodeCount">0</span></div>
+    <div>边：<span id="edgeCount">0</span></div>
+  </div>
+  <div class="loading" id="loading">加载中...</div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <script>
+    async function loadGraph() {
+      try {
+        // Fetch all posts for nodes
+        const postsRes = await fetch('/api/posts');
+        let posts = [];
+        if (postsRes.ok) {
+          const data = await postsRes.json();
+          posts = Array.isArray(data) ? data : (data.posts || []);
+        }
+
+        if (posts.length === 0) {
+          document.getElementById('loading').textContent = '暂无文章数据';
+          return;
+        }
+
+        document.getElementById('nodeCount').textContent = posts.length;
+        document.getElementById('loading').style.display = 'none';
+
+        // Build nodes
+        const nodes = posts.map(p => ({
+          id: p.id,
+          slug: p.slug,
+          title: p.title,
+          excerpt: p.excerpt || '',
+          connections: 0,
+        }));
+
+        // Fetch backlinks for edges
+        const nodeMap = new Map(nodes.map(n => [n.id, n]));
+        const links = [];
+        const seenLinks = new Set();
+
+        for (const node of nodes) {
+          try {
+            const res = await fetch(`/api/backlinks/${node.id}`);
+            if (res.ok) {
+              const data = await res.json();
+              for (const bl of (data.backlinks || [])) {
+                const key = [bl.sourcePostId, node.id].sort().join('-');
+                if (!seenLinks.has(key)) {
+                  seenLinks.add(key);
+                  links.push({ source: bl.sourcePostId, target: node.id });
+                  nodeMap.get(bl.sourcePostId)?.connections++;
+                  nodeMap.get(node.id)?.connections++;
+                }
+              }
+            }
+            // Also get outgoing links
+            const outRes = await fetch(`/api/backlinks/${node.id}/outgoing`);
+            if (outRes.ok) {
+              const outData = await outRes.json();
+              for (const out of (outData.outgoing || [])) {
+                const key = [node.id, out.targetPostId].sort().join('-');
+                if (!seenLinks.has(key)) {
+                  seenLinks.add(key);
+                  links.push({ source: node.id, target: out.targetPostId });
+                  nodeMap.get(node.id)?.connections++;
+                  nodeMap.get(out.targetPostId)?.connections++;
+                }
+              }
+            }
+          } catch (e) {
+            // Continue on individual errors
+          }
+        }
+
+        document.getElementById('edgeCount').textContent = links.length;
+
+        renderGraph(nodes, links);
+      } catch (e) {
+        document.getElementById('loading').textContent = '加载失败: ' + e.message;
+      }
+    }
+
+    function renderGraph(nodes, links) {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      const svg = d3.select('#graph')
+        .append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .call(d3.zoom().scaleExtent([0.1, 4]).on('zoom', (event) => {
+          g.attr('transform', event.transform);
+        }));
+
+      const g = svg.append('g');
+
+      // Define arrow marker
+      svg.append('defs').append('marker')
+        .attr('id', 'arrow')
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 20)
+        .attr('refY', 0)
+        .attr('markerWidth', 6)
+        .attr('markerHeight', 6)
+        .attr('orient', 'auto')
+        .append('path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', '#64748b');
+
+      // Color scale based on connections
+      const maxConn = Math.max(...nodes.map(n => n.connections), 1);
+      const colorScale = (connections) => {
+        const intensity = Math.min(connections / maxConn, 1);
+        const r = Math.round(59 + intensity * (96 - 59));
+        const b = Math.round(246 + intensity * (18 - 246));
+        return `rgb(${r}, 130, ${b})`;
+      };
+
+      // Size scale
+      const sizeScale = (connections) => {
+        return Math.max(8, Math.min(24, 8 + connections * 3));
+      };
+
+      // Simulation
+      const simulation = d3.forceSimulation(nodes)
+        .force('link', d3.forceLink(links).id(d => d.id).distance(120).strength(0.5))
+        .force('charge', d3.forceManyBody().strength(-300))
+        .force('center', d3.forceCenter(width / 2, height / 2))
+        .force('collision', d3.forceCollide().radius(d => sizeScale(d.connections) + 10));
+
+      // Links
+      const link = g.append('g')
+        .attr('class', 'links')
+        .selectAll('line')
+        .data(links)
+        .join('line')
+        .attr('class', 'link')
+        .attr('stroke', '#64748b')
+        .attr('stroke-width', 1.5)
+        .attr('marker-end', 'url(#arrow)');
+
+      // Node groups
+      const node = g.append('g')
+        .attr('class', 'nodes')
+        .selectAll('g')
+        .data(nodes)
+        .join('g')
+        .attr('class', 'node')
+        .call(d3.drag()
+          .on('start', dragstarted)
+          .on('drag', dragged)
+          .on('end', dragended));
+
+      node.append('circle')
+        .attr('r', d => sizeScale(d.connections))
+        .attr('fill', d => colorScale(d.connections))
+        .attr('fill-opacity', 0.8);
+
+      node.append('text')
+        .attr('dx', d => sizeScale(d.connections) + 4)
+        .attr('dy', 4)
+        .text(d => d.title.length > 20 ? d.title.substring(0, 20) + '...' : d.title);
+
+      // Tooltip
+      const tooltip = document.getElementById('tooltip');
+      const tooltipTitle = document.getElementById('tooltipTitle');
+      const tooltipDesc = document.getElementById('tooltipDesc');
+
+      node.on('mouseover', (event, d) => {
+        tooltipTitle.textContent = d.title;
+        tooltipDesc.textContent = d.excerpt.substring(0, 150) + (d.excerpt.length > 150 ? '...' : '');
+        tooltip.classList.add('show');
+      }).on('mousemove', (event) => {
+        tooltip.style.left = (event.clientX + 15) + 'px';
+        tooltip.style.top = (event.clientY + 15) + 'px';
+      }).on('mouseout', () => {
+        tooltip.classList.remove('show');
+      }).on('click', (event, d) => {
+        window.location.href = '/posts/' + d.slug;
+      });
+
+      // Simulation tick
+      simulation.on('tick', () => {
+        link
+          .attr('x1', d => d.source.x)
+          .attr('y1', d => d.source.y)
+          .attr('x2', d => d.target.x)
+          .attr('y2', d => d.target.y);
+
+        node.attr('transform', d => `translate(${d.x},${d.y})`);
+      });
+
+      function dragstarted(event) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        event.subject.fx = event.subject.x;
+        event.subject.fy = event.subject.y;
+      }
+
+      function dragged(event) {
+        event.subject.fx = event.x;
+        event.subject.fy = event.y;
+      }
+
+      function dragended(event) {
+        if (!event.active) simulation.alphaTarget(0);
+        event.subject.fx = null;
+        event.subject.fy = null;
+      }
+
+      // Resize handler
+      window.addEventListener('resize', () => {
+        svg.attr('width', window.innerWidth).attr('height', window.innerHeight);
+        simulation.force('center', d3.forceCenter(window.innerWidth / 2, window.innerHeight / 2));
+        simulation.alpha(0.3).restart();
+      });
+    }
+
+    loadGraph();
+  </script>
+</body>
+</html>
