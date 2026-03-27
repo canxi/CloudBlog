@@ -4,192 +4,358 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#3b82f6">
-  <meta name="description" content="A modern edge blog platform powered by Cloudflare Workers">
+  <meta name="description" content="A modern edge blog powered by Cloudflare Workers">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="CloudBlog">
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <title>CloudBlog</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f9fafb; color: #111827; min-height: 100vh;
+    :root {
+      --primary: #3b82f6;
+      --primary-dark: #2563eb;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --text-secondary: #64748b;
+      --border: #e2e8f0;
+      --accent: #8b5cf6;
+      --success: #10b981;
+      --radius: 16px;
+      --radius-sm: 10px;
     }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Header ── */
     header {
-      background: #3b82f6; color: white; padding: 16px 24px;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 64px;
       display: flex; align-items: center; justify-content: space-between;
       position: sticky; top: 0; z-index: 100;
     }
-    header h1 { font-size: 20px; font-weight: 600; }
-    header a { color: white; text-decoration: none; font-size: 14px; }
-    main { max-width: 800px; margin: 0 auto; padding: 24px; }
-    .install-banner {
-      background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;
-      padding: 12px 16px; margin-bottom: 16px; display: none;
+    .header-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .header-brand .logo { font-size: 22px; }
+    .header-brand span { font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+    .header-nav { display: flex; align-items: center; gap: 6px; }
+    .header-nav a {
+      color: var(--text-secondary); text-decoration: none; font-size: 14px;
+      padding: 6px 12px; border-radius: 8px; transition: all 0.15s; font-weight: 500;
     }
-    .install-banner.show { display: block; }
-    .install-banner p { font-size: 14px; color: #1e40af; margin-bottom: 8px; }
-    .install-banner button {
-      padding: 6px 16px; border-radius: 6px; border: none;
-      background: #3b82f6; color: white; cursor: pointer; font-size: 14px;
+    .header-nav a:hover { background: var(--bg); color: var(--text); }
+    .header-nav a.active { color: var(--primary); background: #eff6ff; }
+    .btn-write {
+      background: var(--primary) !important; color: white !important;
+      padding: 8px 18px !important; border-radius: 10px !important;
+      font-weight: 600 !important; margin-left: 8px;
+      transition: all 0.2s !important;
     }
-    .install-banner button:hover { background: #2563eb; }
+    .btn-write:hover { background: var(--primary-dark) !important; transform: translateY(-1px); }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(135deg, #1e3a5f 0%, #3b82f6 50%, #8b5cf6 100%);
+      color: white;
+      padding: 72px 24px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .hero-content { position: relative; max-width: 600px; margin: 0 auto; }
+    .hero h1 { font-size: clamp(28px, 5vw, 42px); font-weight: 800; margin-bottom: 12px; letter-spacing: -0.5px; }
+    .hero p { font-size: 16px; opacity: 0.85; margin-bottom: 24px; }
+    .hero-stats { display: flex; justify-content: center; gap: 32px; margin-top: 32px; }
+    .hero-stat { text-align: center; }
+    .hero-stat .num { font-size: 28px; font-weight: 800; }
+    .hero-stat .label { font-size: 12px; opacity: 0.7; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* ── Main ── */
+    main { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+
+    /* ── Section header ── */
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .section-title { font-size: 20px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
+    .section-title .icon { font-size: 22px; }
+
+    /* ── Post Cards ── */
+    .posts-grid { display: flex; flex-direction: column; gap: 16px; }
     .post-card {
-      background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: box-shadow 0.2s;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      transition: all 0.2s;
+      cursor: pointer;
+      text-decoration: none;
+      display: block;
     }
-    .post-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    .post-card h2 { font-size: 18px; margin-bottom: 8px; }
-    .post-card h2 a { color: #111827; text-decoration: none; }
-    .post-card h2 a:hover { color: #3b82f6; }
-    .post-meta { font-size: 13px; color: #9ca3af; margin-bottom: 12px; }
-    .post-excerpt { font-size: 15px; color: #4b5563; line-height: 1.6; }
-    .post-cover { width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 12px; }
-    .empty-state { text-align: center; padding: 60px 20px; color: #9ca3af; }
-    .empty-state h2 { font-size: 20px; margin-bottom: 8px; }
-    .pwa-badge {
-      display: inline-flex; align-items: center; gap: 4px; font-size: 12px;
-      background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 4px;
+    .post-card:hover {
+      border-color: var(--primary);
+      box-shadow: 0 4px 20px rgba(59,130,246,0.12);
+      transform: translateY(-2px);
     }
-    .offline-indicator {
-      background: #fef3c7; color: #92400e; padding: 8px 16px; text-align: center;
-      font-size: 14px; display: none;
+    .post-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 12px; }
+    .post-card-title { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1.3; flex: 1; }
+    .post-card:hover .post-card-title { color: var(--primary); }
+    .post-card-cover {
+      width: 80px; height: 80px; border-radius: var(--radius-sm); object-fit: cover;
+      flex-shrink: 0; background: var(--bg);
     }
-    .offline-indicator.show { display: block; }
+    .post-card-meta { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; flex-wrap: wrap; }
+    .post-card-meta .dot { width: 3px; height: 3px; background: var(--text-secondary); border-radius: 50%; }
+    .post-card-excerpt { font-size: 14px; color: var(--text-secondary); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .post-card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; }
+    .post-card-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tag {
+      font-size: 11px; padding: 3px 10px; border-radius: 20px;
+      background: #eff6ff; color: #1e40af; font-weight: 500;
+    }
+    .tag.secondary { background: #f0fdf4; color: #166534; }
+    .read-more { font-size: 13px; color: var(--primary); font-weight: 600; display: flex; align-items: center; gap: 4px; }
+    .post-card:hover .read-more { gap: 8px; }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center; padding: 80px 20px;
+      background: var(--surface); border: 2px dashed var(--border);
+      border-radius: var(--radius); color: var(--text-secondary);
+    }
+    .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-state h3 { font-size: 18px; color: var(--text); margin-bottom: 8px; }
+    .empty-state p { font-size: 14px; margin-bottom: 20px; }
+    .empty-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 24px; background: var(--primary); color: white; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px; }
+    .empty-btn:hover { background: var(--primary-dark); }
+
+    /* ── Loading Skeleton ── */
+    .skeleton-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px;
+    }
+    .skeleton {
+      background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .skel-title { height: 22px; width: 60%; margin-bottom: 12px; }
+    .skel-meta { height: 14px; width: 40%; margin-bottom: 12px; }
+    .skel-excerpt { height: 14px; width: 90%; margin-bottom: 8px; }
+    .skel-excerpt-2 { height: 14px; width: 70%; }
+
+    /* ── Footer ── */
+    footer { background: var(--surface); border-top: 1px solid var(--border); padding: 32px 24px; margin-top: 40px; }
+    .footer-inner { max-width: 860px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    .footer-brand { font-weight: 700; font-size: 15px; color: var(--text); }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a { color: var(--text-secondary); text-decoration: none; font-size: 13px; }
+    .footer-links a:hover { color: var(--primary); }
+    .footer-copy { font-size: 12px; color: var(--text-secondary); }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      .hero { padding: 48px 20px; }
+      .hero-stats { gap: 20px; }
+      .hero-stat .num { font-size: 22px; }
+      main { padding: 24px 16px 60px; }
+      .post-card { padding: 18px; }
+      .post-card-cover { width: 64px; height: 64px; }
+      .header-nav a:not(.btn-write) { display: none; }
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #0f172a; color: white; padding: 12px 24px; border-radius: 10px;
+      font-size: 14px; font-weight: 500; opacity: 0; transition: opacity 0.3s;
+      pointer-events: none; z-index: 200; white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
   </style>
 </head>
 <body>
-  <div class="offline-indicator" id="offlineIndicator">📡 您当前处于离线状态</div>
 
-  <header>
-    <h1>📝 CloudBlog</h1>
-    <div>
-      <span class="pwa-badge" id="pwaBadge" style="display:none">📱 已安装</span>
-      <a href="/write" id="writeLink" style="margin-left:16px">✏️ 写文章</a>
+<header>
+  <a href="/" class="header-brand">
+    <span class="logo">📝</span>
+    <span>CloudBlog</span>
+  </a>
+  <nav class="header-nav">
+    <a href="/" class="active">首页</a>
+    <a href="/notes.html">💡 速记</a>
+    <a href="/snippets.html">📋 片段</a>
+    <a href="/graph.html">🕸️ 图谱</a>
+    <a href="/write.html" class="btn-write">✏️ 写文章</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="hero-content">
+    <h1>🚀 边缘博客新时代</h1>
+    <p>基于 Cloudflare Workers 构建，全球极速访问，无服务器运维</p>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="num" id="statPosts">-</div>
+        <div class="label">文章</div>
+      </div>
+      <div class="hero-stat">
+        <div class="num">⚡</div>
+        <div class="label">边缘节点</div>
+      </div>
+      <div class="hero-stat">
+        <div class="num">🔒</div>
+        <div class="label">安全可靠</div>
+      </div>
     </div>
-  </header>
+  </div>
+</section>
 
-  <main>
-    <div class="install-banner" id="installBanner">
-      <p>将 CloudBlog 添加到主屏幕，随时随地访问</p>
-      <button id="installBtn">立即安装</button>
+<main>
+  <div class="section-header">
+    <div class="section-title">
+      <span class="icon">📖</span>
+      <span>最新文章</span>
     </div>
-    <div id="posts"></div>
-  </main>
+  </div>
 
-  <script>
-    // Register Service Worker
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then((reg) => console.log('SW registered:', reg.scope))
-          .catch((err) => console.error('SW registration failed:', err));
-      });
-    }
+  <div id="postsContainer">
+    <!-- Skeleton loading -->
+    <div class="posts-grid" id="skeleton">
+      ${[1,2,3].map(() => `
+      <div class="skeleton-card">
+        <div class="skeleton skel-title"></div>
+        <div class="skeleton skel-meta"></div>
+        <div class="skeleton skel-excerpt"></div>
+        <div class="skeleton skel-excerpt-2"></div>
+      </div>`).join('')}
+    </div>
 
-    // Online/Offline status
-    function updateOnlineStatus() {
-      const indicator = document.getElementById('offlineIndicator');
-      indicator.classList.toggle('show', !navigator.onLine);
-    }
-    window.addEventListener('online', updateOnlineStatus);
-    window.addEventListener('offline', updateOnlineStatus);
-    updateOnlineStatus();
+    <!-- Posts -->
+    <div class="posts-grid" id="posts" style="display:none"></div>
 
-    // PWA Install prompt
-    let deferredPrompt;
-    const installBanner = document.getElementById('installBanner');
-    const installBtn = document.getElementById('installBtn');
-    const pwaBadge = document.getElementById('pwaBadge');
+    <!-- Empty state -->
+    <div class="empty-state" id="emptyState" style="display:none">
+      <div class="icon">📝</div>
+      <h3>还没有文章</h3>
+      <p>开始创作你的第一篇文章吧</p>
+      <a href="/write.html" class="empty-btn">✏️ 写文章</a>
+    </div>
+  </div>
+</main>
 
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      // Show install banner only if not already installed
-      if (!window.matchMedia('(display-mode: standalone)').matches) {
-        installBanner.classList.add('show');
-      }
-    });
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">📝 CloudBlog</div>
+    <div class="footer-links">
+      <a href="/write.html">写文章</a>
+      <a href="/notes.html">灵感速记</a>
+      <a href="/snippets.html">代码片段</a>
+      <a href="/graph.html">知识图谱</a>
+    </div>
+    <div class="footer-copy">Powered by Cloudflare Workers ⚡</div>
+  </div>
+</footer>
 
-    window.addEventListener('appinstalled', () => {
-      installBanner.classList.remove('show');
-      pwaBadge.style.display = 'inline-flex';
-      deferredPrompt = null;
-    });
+<div class="toast" id="toast"></div>
 
-    // Check if already in standalone mode
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      pwaBadge.style.display = 'inline-flex';
-    }
+<script>
+  // ── Load posts ──
+  async function loadPosts() {
+    try {
+      const res = await fetch('/api/posts');
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      const posts = Array.isArray(data) ? data : (data.posts || []);
 
-    installBtn?.addEventListener('click', async () => {
-      if (!deferredPrompt) return;
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        installBanner.classList.remove('show');
-      }
-      deferredPrompt = null;
-    });
+      document.getElementById('skeleton').style.display = 'none';
 
-    // Load posts
-    async function loadPosts() {
-      try {
-        const res = await fetch('/api/posts');
-        if (!res.ok) throw new Error('Failed to load');
-        const data = await res.json();
-        const posts = Array.isArray(data) ? data : (data.posts || []);
-        renderPosts(posts);
-      } catch {
-        // Try to load from cache
-        if ('caches' in window) {
-          const cache = await caches.open('cloudblog-pages-v1');
-          // For now just show offline message
-          document.getElementById('posts').innerHTML = `
-            <div class="empty-state">
-              <h2>📡 离线模式</h2>
-              <p>无法加载文章，请连接网络后重试</p>
-            </div>`;
-        }
-      }
-    }
-
-    function renderPosts(posts) {
-      const container = document.getElementById('posts');
-      if (!posts || posts.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <h2>暂无文章</h2>
-            <p>点击右上角"写文章"开始创作</p>
-          </div>`;
+      if (posts.length === 0) {
+        document.getElementById('emptyState').style.display = 'block';
+        document.getElementById('statPosts').textContent = '0';
         return;
       }
-      container.innerHTML = posts.map(post => `
-        <article class="post-card">
-          ${post.coverImage ? `<img src="${post.coverImage}" alt="" class="post-cover" loading="lazy">` : ''}
-          <h2><a href="/posts/${post.slug}">${escapeHtml(post.title)}</a></h2>
-          <div class="post-meta">${formatDate(post.publishedAt)} · ${post.categories?.map(c => c.name).join(', ') || ''}</div>
-          <p class="post-excerpt">${escapeHtml(post.excerpt || '')}</p>
-        </article>
-      `).join('');
-    }
 
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
+      document.getElementById('statPosts').textContent = posts.length;
+      renderPosts(posts);
+      document.getElementById('posts').style.display = 'flex';
+    } catch (e) {
+      document.getElementById('skeleton').innerHTML = `
+        <div class="empty-state">
+          <div class="icon">📡</div>
+          <h3>加载失败</h3>
+          <p>请检查网络连接后刷新页面</p>
+          <button class="empty-btn" onclick="loadPosts()">重试</button>
+        </div>`;
     }
+  }
 
-    function formatDate(ts) {
-      if (!ts) return '';
-      return new Date(ts * 1000).toLocaleDateString('zh-CN', {
-        year: 'numeric', month: 'long', day: 'numeric'
-      });
-    }
+  function renderPosts(posts) {
+    const container = document.getElementById('posts');
+    container.innerHTML = posts.map(post => `
+      <a href="/posts/${post.slug}" class="post-card">
+        <div class="post-card-top">
+          <div class="post-card-title">${escapeHtml(post.title)}</div>
+          ${post.coverImage ? `<img src="${post.coverImage}" alt="" class="post-card-cover" loading="lazy">` : ''}
+        </div>
+        <div class="post-card-meta">
+          <span>👤 ${post.author?.name || 'Anonymous'}</span>
+          <span class="dot"></span>
+          <span>📅 ${formatDate(post.publishedAt)}</span>
+          <span class="dot"></span>
+          <span>⏱️ ${estimateReadTime(post.content)} 分钟</span>
+        </div>
+        ${post.excerpt ? `<div class="post-card-excerpt">${escapeHtml(post.excerpt)}</div>` : ''}
+        <div class="post-card-footer">
+          <div class="post-card-tags">
+            ${(post.tags || []).slice(0, 3).map(t => `<span class="tag">${escapeHtml(t.name || t)}</span>`).join('')}
+          </div>
+          <div class="read-more">阅读全文 →</div>
+        </div>
+      </a>
+    `).join('');
+  }
 
-    loadPosts();
-  </script>
+  function estimateReadTime(content) {
+    if (!content) return 1;
+    const words = content.trim().split(/\s+/).length;
+    return Math.max(1, Math.ceil(words / 200));
+  }
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function formatDate(ts) {
+    if (!ts) return '';
+    const d = new Date(ts * (ts > 1e12 ? 1 : 1000));
+    return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  // ── Service Worker ──
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+
+  loadPosts();
+</script>
 </body>
 </html>

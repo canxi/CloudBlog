@@ -5,18 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>离线 - CloudBlog</title>
   <style>
-    body { font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f9fafb; }
-    .card { text-align: center; padding: 2rem; background: white; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    h1 { font-size: 1.5rem; color: #374151; margin-bottom: 0.5rem; }
-    p { color: #6b7280; }
-    button { margin-top: 1rem; padding: 0.5rem 1rem; background: #2563eb; color: white; border: none; border-radius: 0.5rem; cursor: pointer; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; margin: 0; background: #f8fafc;
+    }
+    .card {
+      text-align: center; padding: 48px 32px; background: white;
+      border-radius: 20px; box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      max-width: 360px; width: 90%;
+    }
+    .icon { font-size: 56px; margin-bottom: 16px; }
+    h1 { font-size: 22px; color: #0f172a; margin-bottom: 8px; font-weight: 700; }
+    p { color: #64748b; font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
+    button {
+      padding: 12px 28px; background: #3b82f6; color: white;
+      border: none; border-radius: 12px; cursor: pointer;
+      font-size: 15px; font-weight: 600; transition: background 0.2s;
+    }
+    button:hover { background: #2563eb; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>📡 当前离线</h1>
-    <p>网络连接已断开，请检查网络后重试</p>
-    <button onclick="location.reload()">重试</button>
+    <div class="icon">📡</div>
+    <h1>当前处于离线状态</h1>
+    <p>网络连接已断开，请检查网络后重试。已缓存的文章仍然可以阅读。</p>
+    <button onclick="location.reload()">重新加载</button>
   </div>
 </body>
 </html>
