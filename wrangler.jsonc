@@ -1,0 +1,47 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "cloudblog",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-03-10",
+	"compatibility_flags": [
+		"nodejs_compat",
+		"global_fetch_strictly_public"
+	],
+	"assets": {
+		"directory": "./public"
+	},
+	"observability": {
+		"enabled": true
+	},
+	"upload_source_maps": true,
+	// D1 Database binding
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "cloudblog-db",
+			"database_id": "<your-database-id>"
+		}
+	],
+	// R2 bucket for image storage
+	"r2_buckets": [
+		{
+			"binding": "IMAGES_BUCKET",
+			"bucket_name": "cloudblog-images"
+		}
+	],
+	// KV namespace for import progress tracking
+	"kv_namespaces": [
+		{
+			"binding": "IMPORT_KV",
+			"id": "<your-kv-namespace-id>"
+		}
+	],
+	// Public URL for R2 (set via R2_PUBLIC_URL env var)
+	// "vars": {
+	// 	"R2_PUBLIC_URL": "https://your-r2-account.r2.cloudflarestorage.com/cloudblog-images"
+	// }
+}
