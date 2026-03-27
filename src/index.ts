@@ -15,6 +15,12 @@ import { handleMediaRequest } from './routes/media';
 import { handleCommentsRequest } from './routes/comments';
 import { handlePostsRequest } from './routes/posts';
 
+const STATIC_EXTENSIONS = ['.js', '.css', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.woff', '.woff2', '.ttf', '.eot', '.map'];
+
+function isStaticAsset(pathname: string): boolean {
+  return STATIC_EXTENSIONS.some(ext => pathname.includes(ext));
+}
+
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const url = new URL(request.url);
@@ -75,7 +81,44 @@ export default {
 			return Response.json({ error: 'Not found' }, { status: 404 });
 		}
 
-		// Serve static assets
+		// For static assets (JS, CSS, images), fetch from self
+		if (isStaticAsset(url.pathname)) {
+			const origin = `https://${url.hostname}`;
+			const assetUrl = `${origin}${url.pathname}`;
+			try {
+				const assetRes = await fetch(assetUrl, request);
+				if (assetRes.ok) {
+					return new Response(assetRes.body, {
+						status: assetRes.status,
+						headers: {
+							...Object.fromEntries(assetRes.headers.entries()),
+							'Cache-Control': 'public, max-age=31536000, immutable',
+						},
+					});
+				}
+			} catch {
+				// fall through to 404
+			}
+		}
+
+		// SPA fallback: serve index.html for all other routes
+		// Use a synthetic request to avoid infinite loop
+		const origin = url.hostname;
+		try {
+			const indexRes = await fetch(`https://${origin}/index.html`);
+			if (indexRes.ok) {
+				return new Response(indexRes.body, {
+					status: 200,
+					headers: {
+						'Content-Type': 'text/html; charset=utf-8',
+						'Cache-Control': 'no-cache',
+					},
+				});
+			}
+		} catch {
+			// fall through
+		}
+
 		return Response.json({ error: 'Not found' }, { status: 404 });
 	},
 } satisfies ExportedHandler<Env>;
