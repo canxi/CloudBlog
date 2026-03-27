@@ -133,3 +133,18 @@ CREATE TABLE IF NOT EXISTS snippets (
 CREATE INDEX IF NOT EXISTS idx_snippets_language ON snippets(language);
 CREATE INDEX IF NOT EXISTS idx_snippets_author ON snippets(author_id);
 CREATE INDEX IF NOT EXISTS idx_snippets_public ON snippets(is_public);
+
+-- Quick notes / fleeting notes
+CREATE TABLE IF NOT EXISTS notes (
+    id TEXT PRIMARY KEY,
+    content TEXT NOT NULL,
+    tags TEXT, -- JSON array
+    author_id TEXT,
+    is_archived INTEGER DEFAULT 0,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+    updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_notes_author ON notes(author_id);
+CREATE INDEX IF NOT EXISTS idx_notes_created ON notes(created_at DESC);

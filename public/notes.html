@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#fef3c7">
+  <title>灵感速记 - CloudBlog</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #fef9f0; color: #1c1917; min-height: 100vh; }
+    header { background: #fbbf24; color: #1c1917; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; }
+    header h1 { font-size: 18px; font-weight: 700; }
+    header a { color: #1c1917; text-decoration: none; font-size: 14px; }
+    main { max-width: 600px; margin: 0 auto; padding: 16px; }
+    .quick-input { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px; }
+    textarea { width: 100%; border: none; resize: none; font-size: 16px; line-height: 1.6; font-family: inherit; outline: none; min-height: 80px; }
+    .input-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+    .tags-input { font-size: 13px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 4px 8px; width: 60%; }
+    .save-btn { padding: 8px 20px; background: #fbbf24; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; }
+    .save-btn:hover { background: #f59e0b; }
+    .note-card { background: white; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .note-content { font-size: 15px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+    .note-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+    .note-time { font-size: 12px; color: #9ca3af; }
+    .note-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+    .tag { font-size: 11px; background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 10px; }
+    .note-actions { display: flex; gap: 6px; }
+    .action-btn { padding: 4px 10px; font-size: 12px; border: none; border-radius: 6px; cursor: pointer; }
+    .convert-btn { background: #dbeafe; color: #1e40af; }
+    .delete-btn { background: #fee2e2; color: #991b1b; }
+    .empty-state { text-align: center; padding: 40px; color: #9ca3af; font-size: 15px; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1c1917; color: white; padding: 10px 20px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>💡 灵感速记</h1>
+    <a href="/">← 返回</a>
+  </header>
+
+  <main>
+    <div class="quick-input">
+      <textarea id="noteInput" placeholder="记录一个想法..." autofocus></textarea>
+      <div class="input-footer">
+        <input type="text" class="tags-input" id="tagInput" placeholder="标签（逗号分隔，可选）">
+        <button class="save-btn" onclick="saveNote()">保存</button>
+      </div>
+    </div>
+
+    <div id="notesList"></div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let notes = [];
+
+    async function loadNotes() {
+      try {
+        const res = await fetch('/api/notes?limit=100');
+        const data = await res.json();
+        notes = data.notes || [];
+        renderNotes();
+      } catch (e) {
+        showToast('加载失败');
+      }
+    }
+
+    function renderNotes() {
+      const container = document.getElementById('notesList');
+      if (notes.length === 0) {
+        container.innerHTML = '<div class="empty-state">还没有速记，记录第一个灵感吧！</div>';
+        return;
+      }
+      container.innerHTML = notes.map(n => `
+        <div class="note-card" id="note-${n.id}">
+          <div class="note-content">${escapeHtml(n.content)}</div>
+          <div class="note-footer">
+            <div>
+              ${n.tags && n.tags.length > 0 ? `<div class="note-tags">${n.tags.map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+              <div class="note-time">${formatTime(n.createdAt)}</div>
+            </div>
+            <div class="note-actions">
+              <button class="action-btn convert-btn" onclick="convertNote('${n.id}')">→ 文章</button>
+              <button class="action-btn delete-btn" onclick="deleteNote('${n.id}')">删除</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function saveNote() {
+      const content = document.getElementById('noteInput').value.trim();
+      if (!content) {
+        showToast('内容不能为空');
+        return;
+      }
+      const tagsInput = document.getElementById('tagInput').value;
+      const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean);
+
+      try {
+        const res = await fetch('/api/notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content, tags })
+        });
+        if (res.ok) {
+          document.getElementById('noteInput').value = '';
+          document.getElementById('tagInput').value = '';
+          showToast('已保存');
+          loadNotes();
+        } else {
+          showToast('保存失败');
+        }
+      } catch (e) {
+        showToast('保存失败: ' + e.message);
+      }
+    }
+
+    async function convertNote(id) {
+      if (!confirm('将这条速记转换为草稿文章？')) return;
+      try {
+        const res = await fetch(`/api/notes/${id}/convert`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`已转为文章: ${data.slug}`);
+          loadNotes();
+        } else {
+          showToast(data.error || '转换失败');
+        }
+      } catch (e) {
+        showToast('转换失败');
+      }
+    }
+
+    async function deleteNote(id) {
+      if (!confirm('确定删除这条速记？')) return;
+      try {
+        await fetch(`/api/notes/${id}`, { method: 'DELETE' });
+        document.getElementById('note-' + id)?.remove();
+        showToast('已删除');
+      } catch (e) {
+        showToast('删除失败');
+      }
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function formatTime(ts) {
+      const d = new Date(ts * 1000);
+      const now = new Date();
+      const diff = now - d;
+      if (diff < 60000) return '刚刚';
+      if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+      if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+      return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2000);
+    }
+
+    // Enter to save
+    document.getElementById('noteInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) saveNote();
+    });
+
+    loadNotes();
+  </script>
+</body>
+</html>
