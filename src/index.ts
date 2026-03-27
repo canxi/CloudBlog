@@ -8,6 +8,7 @@ import { handleAnalyticsRequest } from './routes/analytics';
 import { handleExportRequest } from './routes/export';
 import { handleSnippetsRequest } from './routes/snippets';
 import { handleNotesRequest } from './routes/notes';
+import { handleBacklinksRequest } from './routes/backlinks';
 
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
@@ -39,6 +40,9 @@ export default {
 		}
 		if (url.pathname.startsWith('/api/notes')) {
 			return await handleNotesRequest(request, env);
+		}
+		if (url.pathname.startsWith('/api/backlinks')) {
+			return await handleBacklinksRequest(request, env);
 		}
 
 		// Health check

@@ -148,3 +148,18 @@ CREATE TABLE IF NOT EXISTS notes (
 
 CREATE INDEX IF NOT EXISTS idx_notes_author ON notes(author_id);
 CREATE INDEX IF NOT EXISTS idx_notes_created ON notes(created_at DESC);
+
+-- Backlinks for bidirectional linking
+CREATE TABLE IF NOT EXISTS backlinks (
+    id TEXT PRIMARY KEY,
+    source_post_id TEXT NOT NULL,
+    target_post_id TEXT NOT NULL,
+    link_text TEXT, -- the [[text]] used
+    created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+    FOREIGN KEY (source_post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (target_post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    UNIQUE(source_post_id, target_post_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_backlinks_source ON backlinks(source_post_id);
+CREATE INDEX IF NOT EXISTS idx_backlinks_target ON backlinks(target_post_id);
