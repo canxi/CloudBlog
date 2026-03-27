@@ -2,12 +2,19 @@
  * Media Admin API - Image upload to R2 and media library
  */
 
+import { getSessionUser } from '../middleware/auth';
+
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
-function requireAuth(request: Request, env: Env): boolean {
+async function adminAuth(request: Request, env: Env) {
+  const sessionUser = await getSessionUser(request, env.DB);
+  if (sessionUser) return sessionUser;
   const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-  return token === env.API_SECRET;
+  if (token === env.API_SECRET) {
+    return { id: 'api', username: 'api', email: '', displayName: 'API Client', role: 'admin' };
+  }
+  return null;
 }
 
 function getExtension(mimeType: string): string {

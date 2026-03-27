@@ -197,7 +197,8 @@ async function handleListAdmin(request: Request, env: Env): Promise<Response> {
 
 // PATCH /api/admin/comments/:id - Update comment status (approve/spam)
 async function handleUpdate(request: Request, env: Env, id: string): Promise<Response> {
-  if (!requireAuth(request, env)) return jsonResponse({ error: 'Unauthorized' }, 401);
+  const user = await adminAuth(request, env);
+  if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
   
   let body: { status?: 'pending' | 'approved' | 'spam' };
   try {
@@ -218,7 +219,8 @@ async function handleUpdate(request: Request, env: Env, id: string): Promise<Res
 
 // DELETE /api/admin/comments/:id - Delete comment
 async function handleDelete(request: Request, env: Env, id: string): Promise<Response> {
-  if (!requireAuth(request, env)) return jsonResponse({ error: 'Unauthorized' }, 401);
+  const user = await adminAuth(request, env);
+  if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
   
   const key = `comment:${id}`;
   const existing = await env.IMPORT_KV.get(key, 'json') as Comment | null;

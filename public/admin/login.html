@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理登录 - CloudBlog</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #1e3a5f 0%, #3b82f6 100%);
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .login-card {
+      background: white; border-radius: 20px; padding: 40px;
+      width: 90%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .logo { font-size: 36px; text-align: center; margin-bottom: 8px; }
+    h1 { font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 6px; color: #0f172a; }
+    p { font-size: 14px; color: #64748b; text-align: center; margin-bottom: 28px; }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+    input[type="password"], input[type="text"] {
+      width: 100%; padding: 12px 14px; border: 1px solid #d1d5db;
+      border-radius: 10px; font-size: 15px; font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+    .btn { width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .btn:hover { background: #2563eb; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .error.show { display: block; }
+    .back { display: block; text-align: center; margin-top: 16px; color: #64748b; text-decoration: none; font-size: 13px; }
+    .back:hover { color: #3b82f6; }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="logo">📝</div>
+    <h1>CloudBlog 管理</h1>
+    <p>输入访问密钥以进入后台</p>
+    <div class="error" id="error"></div>
+    <div class="form-group">
+      <label for="secret">访问密钥</label>
+      <input type="password" id="secret" placeholder="输入访问密钥" autofocus>
+    </div>
+    <button class="btn" id="loginBtn" onclick="doLogin()">登录</button>
+    <a href="/" class="back">← 返回博客首页</a>
+  </div>
+
+  <script>
+    // If already logged in, redirect to dashboard
+    if (localStorage.getItem('cloudblog_token')) {
+      window.location.href = '/admin/index.html';
+    }
+
+    async function doLogin() {
+      const secret = document.getElementById('secret').value.trim();
+      const errorEl = document.getElementById('error');
+      const btn = document.getElementById('loginBtn');
+
+      if (!secret) {
+        errorEl.textContent = '请输入访问密钥';
+        errorEl.classList.add('show');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '验证中...';
+
+      // Test the token against a protected endpoint
+      try {
+        const res = await fetch('/api/admin/comments', {
+          headers: { 'Authorization': `Bearer ${secret}` }
+        });
+
+        if (res.ok || res.status === 401) {
+          // Store token
+          localStorage.setItem('cloudblog_token', secret);
+          window.location.href = '/admin/index.html';
+        } else {
+          throw new Error('Invalid response');
+        }
+      } catch (e) {
+        errorEl.textContent = '密钥无效，请重试';
+        errorEl.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = '登录';
+      }
+    }
+
+    // Enter key to submit
+    document.getElementById('secret').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doLogin();
+    });
+  </script>
+</body>
+</html>

@@ -167,6 +167,21 @@ export default {
 			}
 		}
 
+		// Admin routes
+		if (url.pathname.startsWith('/admin')) {
+			let page = '/admin/index.html';
+			if (url.pathname === '/admin/login' || url.pathname === '/admin') {
+				page = '/admin/login.html';
+			}
+			const adminRes = await fetch(`https://${url.hostname}${page}`);
+			if (adminRes.ok) {
+				const headers = new Headers({ 'Content-Type': 'text/html; charset=utf-8' });
+				addSecurityHeaders(headers);
+				headers.set('Cache-Control', 'no-cache');
+				return new Response(adminRes.body, { status: 200, headers });
+			}
+		}
+
 		// SPA fallback: serve index.html for all other routes
 		const indexRes = await fetch(`https://${url.hostname}/index.html`);
 		if (indexRes.ok) {
