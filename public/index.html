@@ -1,32 +1,194 @@
-<!doctype html>
-<html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Hello, World!</title>
-	</head>
-	<body>
-		<h1 id="heading"></h1>
-		<p>This page comes from a static asset stored at `public/index.html` as configured in `wrangler.jsonc`.</p>
-		<button id="button" type="button">Fetch a random UUID</button>
-		<output id="random" for="button"></output>
-		<script>
-			fetch('/message')
-				.then((resp) => resp.text())
-				.then((text) => {
-					const h1 = document.getElementById('heading');
-					h1.textContent = text;
-				});
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#3b82f6">
+  <meta name="description" content="A modern edge blog platform powered by Cloudflare Workers">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="CloudBlog">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <title>CloudBlog</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f9fafb; color: #111827; min-height: 100vh;
+    }
+    header {
+      background: #3b82f6; color: white; padding: 16px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    header h1 { font-size: 20px; font-weight: 600; }
+    header a { color: white; text-decoration: none; font-size: 14px; }
+    main { max-width: 800px; margin: 0 auto; padding: 24px; }
+    .install-banner {
+      background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;
+      padding: 12px 16px; margin-bottom: 16px; display: none;
+    }
+    .install-banner.show { display: block; }
+    .install-banner p { font-size: 14px; color: #1e40af; margin-bottom: 8px; }
+    .install-banner button {
+      padding: 6px 16px; border-radius: 6px; border: none;
+      background: #3b82f6; color: white; cursor: pointer; font-size: 14px;
+    }
+    .install-banner button:hover { background: #2563eb; }
+    .post-card {
+      background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: box-shadow 0.2s;
+    }
+    .post-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .post-card h2 { font-size: 18px; margin-bottom: 8px; }
+    .post-card h2 a { color: #111827; text-decoration: none; }
+    .post-card h2 a:hover { color: #3b82f6; }
+    .post-meta { font-size: 13px; color: #9ca3af; margin-bottom: 12px; }
+    .post-excerpt { font-size: 15px; color: #4b5563; line-height: 1.6; }
+    .post-cover { width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 12px; }
+    .empty-state { text-align: center; padding: 60px 20px; color: #9ca3af; }
+    .empty-state h2 { font-size: 20px; margin-bottom: 8px; }
+    .pwa-badge {
+      display: inline-flex; align-items: center; gap: 4px; font-size: 12px;
+      background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 4px;
+    }
+    .offline-indicator {
+      background: #fef3c7; color: #92400e; padding: 8px 16px; text-align: center;
+      font-size: 14px; display: none;
+    }
+    .offline-indicator.show { display: block; }
+  </style>
+</head>
+<body>
+  <div class="offline-indicator" id="offlineIndicator">📡 您当前处于离线状态</div>
 
-			const button = document.getElementById("button");
-			button.addEventListener("click", () => {
-				fetch('/random')
-					.then((resp) => resp.text())
-					.then((text) => {
-						const random = document.getElementById('random');
-						random.textContent = text;
-					});
-			});
-		</script>
-	</body>
+  <header>
+    <h1>📝 CloudBlog</h1>
+    <div>
+      <span class="pwa-badge" id="pwaBadge" style="display:none">📱 已安装</span>
+      <a href="/write" id="writeLink" style="margin-left:16px">✏️ 写文章</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="install-banner" id="installBanner">
+      <p>将 CloudBlog 添加到主屏幕，随时随地访问</p>
+      <button id="installBtn">立即安装</button>
+    </div>
+    <div id="posts"></div>
+  </main>
+
+  <script>
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((reg) => console.log('SW registered:', reg.scope))
+          .catch((err) => console.error('SW registration failed:', err));
+      });
+    }
+
+    // Online/Offline status
+    function updateOnlineStatus() {
+      const indicator = document.getElementById('offlineIndicator');
+      indicator.classList.toggle('show', !navigator.onLine);
+    }
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    updateOnlineStatus();
+
+    // PWA Install prompt
+    let deferredPrompt;
+    const installBanner = document.getElementById('installBanner');
+    const installBtn = document.getElementById('installBtn');
+    const pwaBadge = document.getElementById('pwaBadge');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      // Show install banner only if not already installed
+      if (!window.matchMedia('(display-mode: standalone)').matches) {
+        installBanner.classList.add('show');
+      }
+    });
+
+    window.addEventListener('appinstalled', () => {
+      installBanner.classList.remove('show');
+      pwaBadge.style.display = 'inline-flex';
+      deferredPrompt = null;
+    });
+
+    // Check if already in standalone mode
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      pwaBadge.style.display = 'inline-flex';
+    }
+
+    installBtn?.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        installBanner.classList.remove('show');
+      }
+      deferredPrompt = null;
+    });
+
+    // Load posts
+    async function loadPosts() {
+      try {
+        const res = await fetch('/api/posts');
+        if (!res.ok) throw new Error('Failed to load');
+        const posts = await res.json();
+        renderPosts(posts);
+      } catch {
+        // Try to load from cache
+        if ('caches' in window) {
+          const cache = await caches.open('cloudblog-pages-v1');
+          // For now just show offline message
+          document.getElementById('posts').innerHTML = `
+            <div class="empty-state">
+              <h2>📡 离线模式</h2>
+              <p>无法加载文章，请连接网络后重试</p>
+            </div>`;
+        }
+      }
+    }
+
+    function renderPosts(posts) {
+      const container = document.getElementById('posts');
+      if (!posts || posts.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <h2>暂无文章</h2>
+            <p>点击右上角"写文章"开始创作</p>
+          </div>`;
+        return;
+      }
+      container.innerHTML = posts.map(post => `
+        <article class="post-card">
+          ${post.cover_image ? `<img src="${post.cover_image}" alt="" class="post-cover" loading="lazy">` : ''}
+          <h2><a href="/posts/${post.slug}">${escapeHtml(post.title)}</a></h2>
+          <div class="post-meta">${formatDate(post.published_at)} · ${post.categories?.map(c => c.name).join(', ') || ''}</div>
+          <p class="post-excerpt">${escapeHtml(post.excerpt || '')}</p>
+        </article>
+      `).join('');
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatDate(ts) {
+      if (!ts) return '';
+      return new Date(ts * 1000).toLocaleDateString('zh-CN', {
+        year: 'numeric', month: 'long', day: 'numeric'
+      });
+    }
+
+    loadPosts();
+  </script>
+</body>
 </html>
