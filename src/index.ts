@@ -4,6 +4,7 @@
  */
 
 import { handleMigrationRequest } from './routes/migration';
+import { handleAnalyticsRequest } from './routes/analytics';
 
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
@@ -23,6 +24,9 @@ export default {
 		// API routes
 		if (url.pathname.startsWith('/api/migration')) {
 			return await handleMigrationRequest(request, env);
+		}
+		if (url.pathname.startsWith('/api/analytics')) {
+			return handleAnalyticsRequest(request, env);
 		}
 
 		// Health check

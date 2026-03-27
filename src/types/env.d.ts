@@ -10,6 +10,9 @@ interface Env {
 	// KV for import progress
 	IMPORT_KV: KVNamespace;
 
+	// KV for analytics
+	ANALYTICS_KV: KVNamespace;
+
 	// API secret for authentication
 	API_SECRET: string;
 

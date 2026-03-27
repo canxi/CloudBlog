@@ -38,6 +38,10 @@
 		{
 			"binding": "IMPORT_KV",
 			"id": "<your-kv-namespace-id>"
+		},
+		{
+			"binding": "ANALYTICS_KV",
+			"id": "<your-analytics-kv-namespace-id>"
 		}
 	],
 	// Public URL for R2 (set via R2_PUBLIC_URL env var)
