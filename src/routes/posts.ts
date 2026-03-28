@@ -7,10 +7,13 @@ import { getSessionUser } from '../middleware/auth';
 async function adminAuth(request: Request, env: Env) {
   const sessionUser = await getSessionUser(request, env.DB);
   if (sessionUser) return sessionUser;
+  
+  // Legacy API_SECRET auth (for backwards compatibility)
   const token = request.headers.get('Authorization')?.replace('Bearer ', '');
   if (token === env.API_SECRET) {
     return { id: 'api', username: 'api', email: '', displayName: 'API Client', role: 'admin' };
   }
+  
   return null;
 }
 

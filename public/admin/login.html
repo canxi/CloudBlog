@@ -3,99 +3,116 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>管理登录 - CloudBlog</title>
+  <title>登录 - CloudBlog</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #1e3a5f 0%, #3b82f6 100%);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f8fafc;
       min-height: 100vh;
       display: flex; align-items: center; justify-content: center;
+      padding: 20px;
     }
     .login-card {
-      background: white; border-radius: 20px; padding: 40px;
-      width: 90%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      background: white; border-radius: 16px; padding: 36px 32px;
+      width: 100%; max-width: 360px; box-shadow: 0 4px 24px rgba(0,0,0,0.08);
     }
-    .logo { font-size: 36px; text-align: center; margin-bottom: 8px; }
-    h1 { font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 6px; color: #0f172a; }
-    p { font-size: 14px; color: #64748b; text-align: center; margin-bottom: 28px; }
-    .form-group { margin-bottom: 16px; }
+    .logo { font-size: 32px; text-align: center; margin-bottom: 6px; }
+    h1 { font-size: 20px; font-weight: 700; text-align: center; margin-bottom: 4px; color: #0f172a; letter-spacing: -0.3px; }
+    .subtitle { font-size: 13px; color: #64748b; text-align: center; margin-bottom: 24px; }
+    .form-group { margin-bottom: 14px; }
     label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
-    input[type="password"], input[type="text"] {
-      width: 100%; padding: 12px 14px; border: 1px solid #d1d5db;
-      border-radius: 10px; font-size: 15px; font-family: inherit;
+    input[type="text"], input[type="password"] {
+      width: 100%; padding: 11px 14px; border: 1.5px solid #e2e8f0;
+      border-radius: 10px; font-size: 14px; font-family: inherit;
       transition: border-color 0.2s, box-shadow 0.2s;
+      background: #fafbfc;
     }
-    input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
-    .btn { width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-    .btn:hover { background: #2563eb; }
+    input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); background: white; }
+    .btn { width: 100%; padding: 12px; background: #0f172a; color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-top: 6px; }
+    .btn:hover { background: #1e293b; }
+    .btn:active { transform: scale(0.98); }
     .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    .error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 14px; display: none; }
     .error.show { display: block; }
     .back { display: block; text-align: center; margin-top: 16px; color: #64748b; text-decoration: none; font-size: 13px; }
     .back:hover { color: #3b82f6; }
+    .default-hint {
+      background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px;
+      padding: 10px 14px; font-size: 12px; color: #0369a1; margin-bottom: 16px;
+    }
+    .default-hint strong { display: block; margin-bottom: 2px; }
   </style>
 </head>
 <body>
   <div class="login-card">
-    <div class="logo">📝</div>
-    <h1>CloudBlog 管理</h1>
-    <p>输入访问密钥以进入后台</p>
+    <div class="logo">CloudBlog</div>
+    <h1>管理登录</h1>
+    <p class="subtitle">输入账号信息登录后台</p>
+    
+    <div class="default-hint" id="defaultHint">
+      <strong>默认管理员账号</strong>
+      用户名：admin &nbsp;|&nbsp; 密码：admin123
+    </div>
+
     <div class="error" id="error"></div>
     <div class="form-group">
-      <label for="secret">访问密钥</label>
-      <input type="password" id="secret" placeholder="输入访问密钥" autofocus>
+      <label for="username">用户名</label>
+      <input type="text" id="username" placeholder="输入用户名" autofocus autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label for="password">密码</label>
+      <input type="password" id="password" placeholder="输入密码" autocomplete="current-password">
     </div>
     <button class="btn" id="loginBtn" onclick="doLogin()">登录</button>
     <a href="/" class="back">← 返回博客首页</a>
   </div>
 
   <script>
-    // If already logged in, redirect to dashboard or return_url
-    if (localStorage.getItem('cloudblog_token')) {
-      const params = new URLSearchParams(window.location.search);
-      const returnUrl = params.get('return_url');
-      window.location.href = returnUrl ? decodeURIComponent(returnUrl) : '/admin/index.html';
+    // If already logged in, redirect to dashboard
+    if (localStorage.getItem('cloudblog_session')) {
+      window.location.href = '/admin/index.html';
     }
 
     async function doLogin() {
-      const secret = document.getElementById('secret').value.trim();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
       const errorEl = document.getElementById('error');
       const btn = document.getElementById('loginBtn');
 
-      if (!secret) {
-        errorEl.textContent = '请输入访问密钥';
+      if (!username || !password) {
+        errorEl.textContent = '请输入用户名和密码';
         errorEl.classList.add('show');
         return;
       }
 
       btn.disabled = true;
-      btn.textContent = '验证中...';
+      btn.textContent = '登录中...';
+      errorEl.classList.remove('show');
 
-      // Test the token against a protected endpoint
       try {
-        const res = await fetch('/api/admin/comments', {
-          headers: { 'Authorization': `Bearer ${secret}` }
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
         });
 
+        const data = await res.json();
+
         if (res.ok) {
-          // Store token only on successful auth
-          localStorage.setItem('cloudblog_token', secret);
-          // Also sync to api_secret for write page compatibility
-          localStorage.setItem('cloudblog_api_secret', secret);
-          // Redirect to return_url if provided, otherwise default to admin dashboard
+          localStorage.setItem('cloudblog_session', JSON.stringify(data.user));
           const params = new URLSearchParams(window.location.search);
           const returnUrl = params.get('return_url');
           window.location.href = returnUrl ? decodeURIComponent(returnUrl) : '/admin/index.html';
         } else {
-          errorEl.textContent = '密钥无效，请重试';
+          errorEl.textContent = data.error || '登录失败，请重试';
           errorEl.classList.add('show');
           btn.disabled = false;
           btn.textContent = '登录';
         }
       } catch (e) {
-        errorEl.textContent = '密钥无效，请重试';
+        errorEl.textContent = '网络错误，请重试';
         errorEl.classList.add('show');
         btn.disabled = false;
         btn.textContent = '登录';
@@ -103,7 +120,7 @@
     }
 
     // Enter key to submit
-    document.getElementById('secret').addEventListener('keydown', (e) => {
+    document.getElementById('password').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') doLogin();
     });
   </script>

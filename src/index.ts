@@ -8,6 +8,7 @@ import { handleSearchRequest } from './routes/search';
 import { handleMediaRequest } from './routes/media';
 import { handleCommentsRequest } from './routes/comments';
 import { handlePostsRequest } from './routes/posts';
+import { handleAuthRequest } from './routes/auth';
 import { handleCORS, checkRateLimit, getCorsHeaders } from './utils/security';
 
 const STATIC_EXTENSIONS = ['.js', '.css', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.woff', '.woff2', '.ttf', '.eot', '.map'];
@@ -61,6 +62,9 @@ export default {
 		}
 
 		// API routes
+		if (url.pathname.startsWith('/api/auth')) {
+			return await handleAuthRequest(request, env);
+		}
 		if (url.pathname.startsWith('/api/migration')) {
 			return await handleMigrationRequest(request, env);
 		}

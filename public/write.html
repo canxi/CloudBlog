@@ -106,29 +106,13 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    // Login guard: redirect to login if not authenticated or token invalid
-    (async function() {
-      const token = localStorage.getItem('cloudblog_token');
-      if (!token) {
+    // Login guard: redirect to login if not authenticated
+    (function() {
+      const session = localStorage.getItem('cloudblog_session');
+      if (!session) {
         const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
         window.location.href = '/admin/login.html?return_url=' + returnUrl;
         return;
-      }
-      // Validate token by calling protected API
-      try {
-        const res = await fetch('/api/admin/comments', {
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-        if (!res.ok) {
-          // Token invalid → redirect to login
-          localStorage.removeItem('cloudblog_token');
-          localStorage.removeItem('cloudblog_api_secret');
-          const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
-          window.location.href = '/admin/login.html?return_url=' + returnUrl;
-          return;
-        }
-      } catch (e) {
-        // Network error → allow access, user will get error on save
       }
     })();
 
@@ -199,7 +183,8 @@
       try {
         const res = await fetch('/api/posts', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getApiSecret() },
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ title, slug, content, excerpt, status, tags: currentTags })
         });
 
@@ -207,6 +192,9 @@
           const data = await res.json();
           showToast(status === 'published' ? '发布成功！' : '草稿已保存');
           setTimeout(() => { window.location.href = `/posts/${data.slug}`; }, 800);
+        } else if (res.status === 401) {
+          showToast('请先登录');
+          setTimeout(() => { window.location.href = '/admin/login.html'; }, 1500);
         } else {
           const err = await res.json();
           showToast(err.error || '保存失败');
@@ -232,10 +220,6 @@
         content.style.fontFamily = "'SF Mono', 'Consolas', monospace";
         content.style.whiteSpace = 'pre';
       }
-    }
-
-    function getApiSecret() {
-      return localStorage.getItem('cloudblog_api_secret') || prompt('请输入 API Secret（用于发布文章）:') || '';
     }
 
     function escapeHtml(str) {

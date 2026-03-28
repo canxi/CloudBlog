@@ -16,6 +16,8 @@
     .header-left h1 { font-size: 16px; font-weight: 700; }
     .header-left a { font-size: 14px; color: var(--text-sec); }
     .header-left a:hover { color: var(--primary); }
+    .header-right { display: flex; align-items: center; gap: 8px; }
+    .user-info { font-size: 13px; color: var(--text-sec); padding-right: 8px; border-right: 1px solid var(--border); margin-right: 4px; }
     .logout-btn { padding: 7px 16px; background: #f1f5f9; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; }
 
     main { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
@@ -67,15 +69,38 @@
     .post-actions { display: flex; gap: 6px; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
+
+    /* Password modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 300; padding: 20px; }
+    .modal-overlay.hidden { display: none; }
+    .modal { background: white; border-radius: 12px; padding: 24px; width: 100%; max-width: 380px; }
+    .modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+    .form-group input { width: 100%; padding: 10px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: inherit; }
+    .form-group input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+    .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+    .modal-actions button { flex: 1; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .modal-actions .cancel-btn { background: #f1f5f9; border: 1px solid var(--border); color: var(--text-sec); }
+    .modal-actions .save-btn { background: var(--primary); border: none; color: white; }
+    .modal-actions .save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .modal-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; border-radius: 6px; padding: 8px 12px; font-size: 13px; margin-bottom: 12px; display: none; }
+    .modal-error.show { display: block; }
+    .change-pw-btn { padding: 7px 16px; background: white; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; }
+    .change-pw-btn:hover { background: #f8fafc; }
   </style>
 </head>
 <body>
 <header>
   <div class="header-left">
-    <h1>📝 CloudBlog 管理后台</h1>
+    <h1>CloudBlog 管理后台</h1>
     <a href="/">← 返回博客</a>
   </div>
-  <button class="logout-btn" onclick="logout()">退出登录</button>
+  <div class="header-right">
+    <span class="user-info" id="userInfo">加载中...</span>
+    <button class="change-pw-btn" onclick="openPasswordModal()">修改密码</button>
+    <button class="logout-btn" onclick="logout()">退出</button>
+  </div>
 </header>
 
 <main>
@@ -101,8 +126,8 @@
 
   <div class="section">
     <div class="tab-bar">
-      <div class="tab active" onclick="switchTab('comments', this)">💬 评论管理</div>
-      <div class="tab" onclick="switchTab('posts', this)">📝 文章管理</div>
+      <div class="tab active" onclick="switchTab('comments', this)">评论管理</div>
+      <div class="tab" onclick="switchTab('posts', this)">文章管理</div>
     </div>
 
     <div id="tab-comments" class="tab-content active">
@@ -117,15 +142,36 @@
   </div>
 </main>
 
+<!-- Password Change Modal -->
+<div class="modal-overlay hidden" id="passwordModal">
+  <div class="modal">
+    <h3>修改密码</h3>
+    <div class="modal-error" id="pwError"></div>
+    <div class="form-group">
+      <label for="currentPw">当前密码</label>
+      <input type="password" id="currentPw" autocomplete="current-password">
+    </div>
+    <div class="form-group">
+      <label for="newPw">新密码（至少6位）</label>
+      <input type="password" id="newPw" autocomplete="new-password">
+    </div>
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closePasswordModal()">取消</button>
+      <button class="save-btn" id="savePwBtn" onclick="savePassword()">保存</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
-  function getToken() {
-    return localStorage.getItem('cloudblog_token') || '';
+  function getSession() {
+    const s = localStorage.getItem('cloudblog_session');
+    return s ? JSON.parse(s) : null;
   }
 
   function requireAuth() {
-    if (!getToken()) {
+    if (!getSession()) {
       window.location.href = '/admin/login.html';
       return false;
     }
@@ -133,18 +179,21 @@
   }
 
   function logout() {
-    localStorage.removeItem('cloudblog_token');
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    localStorage.removeItem('cloudblog_session');
     window.location.href = '/admin/login.html';
   }
 
   async function apiFetch(url, options = {}) {
-    const token = getToken();
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-      ...options.headers,
-    };
-    const res = await fetch(url, { ...options, headers });
+    const session = getSession();
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      credentials: 'include',
+    });
     if (res.status === 401) {
       logout();
       throw new Error('Unauthorized');
@@ -164,6 +213,68 @@
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     el.classList.add('active');
     document.getElementById('tab-' + name).classList.add('active');
+    if (name === 'posts' && !window.postsLoaded) {
+      window.postsLoaded = true;
+      loadPosts();
+    }
+  }
+
+  function openPasswordModal() {
+    document.getElementById('passwordModal').classList.remove('hidden');
+    document.getElementById('pwError').classList.remove('show');
+    document.getElementById('currentPw').value = '';
+    document.getElementById('newPw').value = '';
+  }
+
+  function closePasswordModal() {
+    document.getElementById('passwordModal').classList.add('hidden');
+  }
+
+  async function savePassword() {
+    const currentPw = document.getElementById('currentPw').value;
+    const newPw = document.getElementById('newPw').value;
+    const errorEl = document.getElementById('pwError');
+    const btn = document.getElementById('savePwBtn');
+
+    if (!currentPw || !newPw) {
+      errorEl.textContent = '请填写所有字段';
+      errorEl.classList.add('show');
+      return;
+    }
+
+    if (newPw.length < 6) {
+      errorEl.textContent = '新密码至少6位';
+      errorEl.classList.add('show');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '保存中...';
+
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
+        credentials: 'include',
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        showToast('密码修改成功');
+        closePasswordModal();
+      } else {
+        errorEl.textContent = data.error || '修改失败';
+        errorEl.classList.add('show');
+      }
+    } catch (e) {
+      errorEl.textContent = '网络错误，请重试';
+      errorEl.classList.add('show');
+    }
+
+    btn.disabled = false;
+    btn.textContent = '保存';
   }
 
   // ── Stats ──
@@ -181,9 +292,7 @@
       document.getElementById('statPending').textContent = comments.filter(c => c.status === 'pending').length;
       document.getElementById('statApproved').textContent = comments.filter(c => c.status === 'approved').length;
       document.getElementById('statSpam').textContent = comments.filter(c => c.status === 'spam').length;
-    } catch (e) {
-      // silently fail
-    }
+    } catch (e) {}
   }
 
   // ── Comments ──
@@ -216,9 +325,9 @@
             </div>
             <div class="comment-content">${escapeHtml(c.content)}</div>
             <div class="comment-actions">
-              ${c.status !== 'approved' ? `<button class="action-btn approve-btn" onclick="moderateComment('${c.id}', 'approved')">✅ 通过</button>` : ''}
-              ${c.status !== 'spam' ? `<button class="action-btn spam-btn" onclick="moderateComment('${c.id}', 'spam')">🚫 Spam</button>` : ''}
-              <button class="action-btn delete-btn" onclick="deleteComment('${c.id}')">🗑️ 删除</button>
+              ${c.status !== 'approved' ? `<button class="action-btn approve-btn" onclick="moderateComment('${c.id}', 'approved')">通过</button>` : ''}
+              ${c.status !== 'spam' ? `<button class="action-btn spam-btn" onclick="moderateComment('${c.id}', 'spam')">Spam</button>` : ''}
+              <button class="action-btn delete-btn" onclick="deleteComment('${c.id}')">删除</button>
             </div>
           </div>
         </div>
@@ -288,7 +397,7 @@
             <div class="post-meta">${p.status} · ${formatTime(p.createdAt)} · ${p.author?.name || 'Unknown'}</div>
           </div>
           <div class="post-actions">
-            <a href="/posts/${p.slug}" class="action-btn" style="background:#eff6ff;color:#1e40af" target="_blank">👁️ 查看</a>
+            <a href="/posts/${p.slug}" class="action-btn" style="background:#eff6ff;color:#1e40af" target="_blank">查看</a>
           </div>
         </div>
       `).join('');
@@ -299,6 +408,7 @@
   }
 
   function escapeHtml(str) {
+    if (!str) return '';
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
@@ -317,10 +427,10 @@
 
   // ── Init ──
   if (!requireAuth()) {} else {
+    const session = getSession();
+    document.getElementById('userInfo').textContent = session?.username || 'Admin';
     loadStats();
     loadComments();
-    document.getElementById('tab-posts').addEventListener('activate', loadPosts);
-    document.querySelector('.tab[onclick*="posts"]').addEventListener('click', loadPosts);
   }
 </script>
 </body>

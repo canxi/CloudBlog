@@ -2,279 +2,177 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#3b82f6">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
   <meta name="description" content="A modern edge blog powered by Cloudflare Workers">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="CloudBlog">
-  <link rel="manifest" href="/manifest.json">
-  <link rel="apple-touch-icon" href="/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <title>CloudBlog</title>
   <style>
     :root {
-      --primary: #3b82f6;
-      --primary-dark: #2563eb;
-      --bg: #f8fafc;
-      --surface: #ffffff;
-      --text: #0f172a;
-      --text-secondary: #64748b;
-      --border: #e2e8f0;
-      --accent: #8b5cf6;
-      --success: #10b981;
-      --radius: 16px;
-      --radius-sm: 10px;
+      --primary: #111;
+      --text: #111;
+      --text-secondary: #666;
+      --bg: #fff;
+      --surface: #fff;
+      --border: #e5e5e5;
+      --radius: 8px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background: var(--bg); color: var(--text); min-height: 100vh;
-      line-height: 1.6;
+      line-height: 1.6; -webkit-font-smoothing: antialiased;
     }
 
     /* ── Header ── */
     header {
-      background: rgba(255,255,255,0.85);
-      backdrop-filter: blur(12px);
+      background: var(--bg);
       border-bottom: 1px solid var(--border);
-      padding: 0 24px;
-      height: 64px;
+      padding: 0 20px;
+      height: 56px;
       display: flex; align-items: center; justify-content: space-between;
       position: sticky; top: 0; z-index: 100;
     }
-    .header-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-    .header-brand .logo { font-size: 22px; }
-    .header-brand span { font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
-    .header-nav { display: flex; align-items: center; gap: 6px; }
+    .header-brand { font-size: 16px; font-weight: 700; color: var(--text); text-decoration: none; letter-spacing: -0.3px; }
+    .header-nav { display: flex; align-items: center; gap: 4px; }
     .header-nav a {
-      color: var(--text-secondary); text-decoration: none; font-size: 14px;
-      padding: 6px 12px; border-radius: 8px; transition: all 0.15s; font-weight: 500;
+      color: var(--text-secondary); text-decoration: none; font-size: 13px;
+      padding: 6px 12px; border-radius: 6px; transition: all 0.15s; font-weight: 500;
     }
-    .header-nav a:hover { background: var(--bg); color: var(--text); }
-    .header-nav a.active { color: var(--primary); background: #eff6ff; }
+    .header-nav a:hover { background: #f5f5f5; color: var(--text); }
     .btn-write {
       background: var(--primary) !important; color: white !important;
-      padding: 8px 18px !important; border-radius: 10px !important;
-      font-weight: 600 !important; margin-left: 8px;
-      transition: all 0.2s !important;
+      padding: 7px 14px !important; border-radius: 6px !important;
+      font-weight: 600 !important; font-size: 13px !important;
     }
-    .btn-write:hover { background: var(--primary-dark) !important; transform: translateY(-1px); }
-
-    /* ── Hero ── */
-    .hero {
-      background: linear-gradient(135deg, #1e3a5f 0%, #3b82f6 50%, #8b5cf6 100%);
-      color: white;
-      padding: 72px 24px;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-    .hero::before {
-      content: '';
-      position: absolute; inset: 0;
-      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    }
-    .hero-content { position: relative; max-width: 600px; margin: 0 auto; }
-    .hero h1 { font-size: clamp(28px, 5vw, 42px); font-weight: 800; margin-bottom: 12px; letter-spacing: -0.5px; }
-    .hero p { font-size: 16px; opacity: 0.85; margin-bottom: 24px; }
-    .hero-stats { display: flex; justify-content: center; gap: 32px; margin-top: 32px; }
-    .hero-stat { text-align: center; }
-    .hero-stat .num { font-size: 28px; font-weight: 800; }
-    .hero-stat .label { font-size: 12px; opacity: 0.7; text-transform: uppercase; letter-spacing: 1px; }
+    .btn-write:hover { opacity: 0.85 !important; }
 
     /* ── Main ── */
-    main { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+    main { max-width: 680px; margin: 0 auto; padding: 32px 20px 80px; }
 
-    /* ── Section header ── */
-    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-    .section-title { font-size: 20px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
-    .section-title .icon { font-size: 22px; }
-
-    /* ── Post Cards ── */
-    .posts-grid { display: flex; flex-direction: column; gap: 16px; }
-    .post-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-      transition: all 0.2s;
+    /* ── Post List ── */
+    .posts-list { display: flex; flex-direction: column; }
+    .post-item {
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border);
       cursor: pointer;
-      text-decoration: none;
-      display: block;
     }
-    .post-card:hover {
-      border-color: var(--primary);
-      box-shadow: 0 4px 20px rgba(59,130,246,0.12);
-      transform: translateY(-2px);
+    .post-item:last-child { border-bottom: none; }
+    .post-item:hover .post-title { color: #666; }
+    .post-title {
+      font-size: 17px; font-weight: 600; color: var(--text); line-height: 1.4;
+      margin-bottom: 8px; letter-spacing: -0.2px; transition: color 0.15s;
     }
-    .post-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 12px; }
-    .post-card-title { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1.3; flex: 1; }
-    .post-card:hover .post-card-title { color: var(--primary); }
-    .post-card-cover {
-      width: 80px; height: 80px; border-radius: var(--radius-sm); object-fit: cover;
-      flex-shrink: 0; background: var(--bg);
-    }
-    .post-card-meta { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; flex-wrap: wrap; }
-    .post-card-meta .dot { width: 3px; height: 3px; background: var(--text-secondary); border-radius: 50%; }
-    .post-card-excerpt { font-size: 14px; color: var(--text-secondary); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .post-card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; }
-    .post-card-tags { display: flex; gap: 6px; flex-wrap: wrap; }
-    .tag {
-      font-size: 11px; padding: 3px 10px; border-radius: 20px;
-      background: #eff6ff; color: #1e40af; font-weight: 500;
-    }
-    .tag.secondary { background: #f0fdf4; color: #166534; }
-    .read-more { font-size: 13px; color: var(--primary); font-weight: 600; display: flex; align-items: center; gap: 4px; }
-    .post-card:hover .read-more { gap: 8px; }
+    .post-meta { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .post-meta span { white-space: nowrap; }
+    .post-excerpt { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-top: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
     /* ── Empty state ── */
     .empty-state {
-      text-align: center; padding: 80px 20px;
-      background: var(--surface); border: 2px dashed var(--border);
-      border-radius: var(--radius); color: var(--text-secondary);
+      text-align: center; padding: 60px 20px;
+      color: var(--text-secondary);
     }
-    .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
-    .empty-state h3 { font-size: 18px; color: var(--text); margin-bottom: 8px; }
-    .empty-state p { font-size: 14px; margin-bottom: 20px; }
-    .empty-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 24px; background: var(--primary); color: white; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px; }
-    .empty-btn:hover { background: var(--primary-dark); }
+    .empty-state h3 { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .empty-state p { font-size: 13px; }
+    .empty-btn { display: inline-block; margin-top: 16px; padding: 8px 20px; background: var(--primary); color: white; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; }
+    .empty-btn:hover { opacity: 0.85; }
 
     /* ── Loading Skeleton ── */
-    .skeleton-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 24px;
-    }
+    .skeleton-item { padding: 24px 0; border-bottom: 1px solid var(--border); }
+    .skeleton-item:last-child { border-bottom: none; }
     .skeleton {
-      background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
       background-size: 200% 100%;
       animation: shimmer 1.5s infinite;
-      border-radius: 6px;
+      border-radius: 4px;
     }
     @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-    .skel-title { height: 22px; width: 60%; margin-bottom: 12px; }
-    .skel-meta { height: 14px; width: 40%; margin-bottom: 12px; }
-    .skel-excerpt { height: 14px; width: 90%; margin-bottom: 8px; }
-    .skel-excerpt-2 { height: 14px; width: 70%; }
+    .skel-title { height: 18px; width: 55%; margin-bottom: 10px; }
+    .skel-meta { height: 12px; width: 30%; }
 
     /* ── Footer ── */
-    footer { background: var(--surface); border-top: 1px solid var(--border); padding: 32px 24px; margin-top: 40px; }
-    .footer-inner { max-width: 860px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
-    .footer-brand { font-weight: 700; font-size: 15px; color: var(--text); }
-    .footer-links { display: flex; gap: 20px; }
-    .footer-links a { color: var(--text-secondary); text-decoration: none; font-size: 13px; }
-    .footer-links a:hover { color: var(--primary); }
-    .footer-copy { font-size: 12px; color: var(--text-secondary); }
-
-    /* ── Responsive ── */
-    @media (max-width: 640px) {
-      .hero { padding: 48px 20px; }
-      .hero-stats { gap: 20px; }
-      .hero-stat .num { font-size: 22px; }
-      main { padding: 24px 16px 60px; }
-      .post-card { padding: 18px; }
-      .post-card-cover { width: 64px; height: 64px; }
-      .header-nav a:not(.btn-write) { display: none; }
-    }
+    footer { border-top: 1px solid var(--border); padding: 24px 20px; margin-top: 40px; }
+    .footer-inner { max-width: 680px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--text-secondary); }
+    .footer-links { display: flex; gap: 16px; }
+    .footer-links a { color: var(--text-secondary); text-decoration: none; }
+    .footer-links a:hover { color: var(--text); }
 
     /* ── Toast ── */
     .toast {
-      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-      background: #0f172a; color: white; padding: 12px 24px; border-radius: 10px;
-      font-size: 14px; font-weight: 500; opacity: 0; transition: opacity 0.3s;
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: #111; color: white; padding: 10px 20px; border-radius: 8px;
+      font-size: 13px; font-weight: 500; opacity: 0; transition: opacity 0.3s;
       pointer-events: none; z-index: 200; white-space: nowrap;
     }
     .toast.show { opacity: 1; }
+
+    /* ── Post Detail ── */
+    .post-detail { max-width: 100%; }
+    .post-detail-header { margin-bottom: 28px; }
+    .post-detail-title { font-size: clamp(20px, 5vw, 26px); font-weight: 700; color: var(--text); line-height: 1.3; margin-bottom: 14px; letter-spacing: -0.3px; }
+    .post-detail-meta { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .post-detail-content { font-size: 15px; line-height: 1.8; color: var(--text); }
+    .post-detail-content p { margin-bottom: 14px; }
+    .post-detail-content h1, .post-detail-content h2, .post-detail-content h3 { margin: 22px 0 10px; font-weight: 700; }
+    .post-detail-content h2 { font-size: 18px; }
+    .post-detail-content h3 { font-size: 16px; }
+    .post-detail-content code { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+    .post-detail-content pre { background: #1a1a1a; color: #e5e5e5; padding: 14px; border-radius: 8px; overflow-x: auto; margin: 14px 0; }
+    .post-detail-content pre code { background: none; padding: 0; color: inherit; font-size: 13px; }
+    .post-detail-content blockquote { border-left: 3px solid var(--border); padding: 10px 14px; background: #fafafa; margin: 14px 0; border-radius: 0 6px 6px 0; }
+    .post-detail-content a { color: #0066cc; }
+    .post-detail-content img { max-width: 100%; border-radius: 6px; margin: 14px 0; }
+    .post-detail-content ul, .post-detail-content ol { padding-left: 22px; margin-bottom: 14px; }
+    .post-detail-content li { margin-bottom: 4px; }
+    .post-detail-footer { margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--border); }
+    .back-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #f5f5f5; border: none; border-radius: 6px; color: var(--text-secondary); text-decoration: none; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+    .back-btn:hover { background: #eee; color: var(--text); }
   </style>
 </head>
 <body>
 
 <header>
-  <a href="/" class="header-brand">
-    <span class="logo">📝</span>
-    <span>CloudBlog</span>
-  </a>
+  <a href="/" class="header-brand">CloudBlog</a>
   <nav class="header-nav">
-    <a href="/" class="active">首页</a>
-    <a href="/write.html" class="btn-write" onclick="return goWrite(event)">✏️ 写文章</a>
+    <a href="/" id="navHome">首页</a>
+    <a href="/write.html" class="btn-write" onclick="return goWrite(event)">写文章</a>
   </nav>
 </header>
 
-<section class="hero">
-  <div class="hero-content">
-    <h1>🚀 边缘博客新时代</h1>
-    <p>基于 Cloudflare Workers 构建，全球极速访问，无服务器运维</p>
-    <div class="hero-stats">
-      <div class="hero-stat">
-        <div class="num" id="statPosts">-</div>
-        <div class="label">文章</div>
-      </div>
-      <div class="hero-stat">
-        <div class="num">⚡</div>
-        <div class="label">边缘节点</div>
-      </div>
-      <div class="hero-stat">
-        <div class="num">🔒</div>
-        <div class="label">安全可靠</div>
-      </div>
-    </div>
+<main id="mainContent">
+  <div class="posts-list" id="skeleton">
+    ${[1,2,3].map(() => `<div class="skeleton-item"><div class="skeleton skel-title"></div><div class="skeleton skel-meta"></div></div>`).join('')}
   </div>
-</section>
-
-<main>
-  <div class="section-header">
-    <div class="section-title">
-      <span class="icon">📖</span>
-      <span>最新文章</span>
-    </div>
-  </div>
-
-  <div id="postsContainer">
-    <!-- Skeleton loading -->
-    <div class="posts-grid" id="skeleton">
-      ${[1,2,3].map(() => `
-      <div class="skeleton-card">
-        <div class="skeleton skel-title"></div>
-        <div class="skeleton skel-meta"></div>
-        <div class="skeleton skel-excerpt"></div>
-        <div class="skeleton skel-excerpt-2"></div>
-      </div>`).join('')}
-    </div>
-
-    <!-- Posts -->
-    <div class="posts-grid" id="posts" style="display:none"></div>
-
-    <!-- Empty state -->
-    <div class="empty-state" id="emptyState" style="display:none">
-      <div class="icon">📝</div>
-      <h3>还没有文章</h3>
-      <p>开始创作你的第一篇文章吧</p>
-      <a href="/write.html" class="empty-btn" onclick="return goWrite(event)">✏️ 写文章</a>
-    </div>
+  <div class="posts-list" id="postsList" style="display:none"></div>
+  <div class="empty-state" id="emptyState" style="display:none">
+    <h3>还没有文章</h3>
+    <p>开始创作你的第一篇文章吧</p>
+    <a href="/write.html" class="empty-btn" onclick="return goWrite(event)">写文章</a>
   </div>
 </main>
 
 <footer>
   <div class="footer-inner">
-    <div class="footer-brand">📝 CloudBlog</div>
+    <span>CloudBlog</span>
     <div class="footer-links">
       <a href="/write.html" onclick="return goWrite(event)">写文章</a>
+      <a href="/" onclick="return goHome(event)">首页</a>
     </div>
-    <div class="footer-copy">Powered by Cloudflare Workers ⚡</div>
+    <span>Powered by Cloudflare Workers</span>
   </div>
 </footer>
 
 <div class="toast" id="toast"></div>
 
 <script>
-  // ── SPA Router ──
+  // ── Router ──
   function getRoute() {
     const path = window.location.pathname;
-    // Home: /
     if (path === '/') return { page: 'home' };
-    // Post detail: /posts/:slug
     const match = path.match(/^\/posts\/([^/]+)$/);
     if (match) return { page: 'post', slug: match[1] };
     return { page: 'home' };
@@ -292,19 +190,16 @@
 
       if (posts.length === 0) {
         document.getElementById('emptyState').style.display = 'block';
-        document.getElementById('statPosts').textContent = '0';
         return;
       }
 
-      document.getElementById('statPosts').textContent = posts.length;
       renderPosts(posts);
-      document.getElementById('posts').style.display = 'flex';
+      document.getElementById('postsList').style.display = 'flex';
     } catch (e) {
       document.getElementById('skeleton').innerHTML = `
         <div class="empty-state">
-          <div class="icon">📡</div>
           <h3>加载失败</h3>
-          <p>请检查网络连接后刷新页面</p>
+          <p>请检查网络连接后刷新</p>
           <button class="empty-btn" onclick="loadPosts()">重试</button>
         </div>`;
     }
@@ -312,12 +207,8 @@
 
   // ── Load single post ──
   async function loadPost(slug) {
-    const main = document.getElementById('postsContainer') || document.querySelector('main');
-    main.innerHTML = `
-      <div style="text-align:center;padding:60px;color:#9ca3af;">
-        <div style="font-size:32px;margin-bottom:12px;">⏳</div>
-        <div>加载中...</div>
-      </div>`;
+    const main = document.getElementById('mainContent');
+    main.innerHTML = `<div style="text-align:center;padding:60px;color:#999;font-size:14px;">加载中...</div>`;
 
     try {
       const res = await fetch(`/api/posts/${encodeURIComponent(slug)}`);
@@ -327,97 +218,49 @@
     } catch (e) {
       main.innerHTML = `
         <div class="empty-state">
-          <div class="icon">🔍</div>
           <h3>文章不存在或已被删除</h3>
-          <p>可能已被作者移除</p>
-          <a href="/" class="empty-btn">← 返回首页</a>
+          <p><a href="/" class="empty-btn" style="margin-top:12px;">返回首页</a></p>
         </div>`;
     }
   }
 
-  // ── Render post detail ──
+  // ── Render post ──
   function renderPost(post) {
-    const main = document.getElementById('postsContainer') || document.querySelector('main');
-    const articleHtml = convertMarkdown ? simpleMarkdown(post.content) : escapeHtml(post.content);
-    const readingTime = estimateReadTime(post.content);
-
+    const main = document.getElementById('mainContent');
     main.innerHTML = `
-      <article class="post-detail">
+      <div class="post-detail">
         <div class="post-detail-header">
-          ${post.coverImage ? `<img src="${post.coverImage}" alt="" class="post-detail-cover">` : ''}
           <h1 class="post-detail-title">${escapeHtml(post.title)}</h1>
           <div class="post-detail-meta">
-            <span>👤 ${escapeHtml(post.author?.name || 'Anonymous')}</span>
-            <span class="dot"></span>
-            <span>📅 ${formatDate(post.publishedAt)}</span>
-            <span class="dot"></span>
-            <span>⏱️ ${readingTime} 分钟阅读</span>
+            <span>${escapeHtml(post.author?.name || 'Anonymous')}</span>
+            <span>·</span>
+            <span>${formatDate(post.publishedAt)}</span>
+            <span>·</span>
+            <span>${estimateReadTime(post.content)} 分钟</span>
           </div>
-          ${(post.tags || []).length > 0 ? `
-          <div class="post-detail-tags">
-            ${post.tags.map(t => `<span class="tag">${escapeHtml(t.name || t)}</span>`).join('')}
-          </div>` : ''}
         </div>
-        <div class="post-detail-content">${articleHtml}</div>
+        <div class="post-detail-content">${simpleMarkdown(post.content)}</div>
         <div class="post-detail-footer">
-          <a href="/" class="back-btn">← 返回首页</a>
+          <button class="back-btn" onclick="history.back()">← 返回</button>
         </div>
-      </article>
-      <div id="relatedComments"></div>
-      <style>
-        .post-detail { max-width: 720px; margin: 0 auto; }
-        .post-detail-header { margin-bottom: 32px; }
-        .post-detail-cover { width: 100%; max-height: 400px; object-fit: cover; border-radius: 16px; margin-bottom: 24px; }
-        .post-detail-title { font-size: clamp(24px, 5vw, 36px); font-weight: 800; color: var(--text); line-height: 1.2; margin-bottom: 16px; letter-spacing: -0.5px; }
-        .post-detail-meta { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--text-secondary); flex-wrap: wrap; margin-bottom: 16px; }
-        .post-detail-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
-        .post-detail-content { font-size: 16px; line-height: 1.8; color: var(--text); }
-        .post-detail-content h1, .post-detail-content h2, .post-detail-content h3 { margin: 24px 0 12px; font-weight: 700; }
-        .post-detail-content h1 { font-size: 28px; }
-        .post-detail-content h2 { font-size: 22px; }
-        .post-detail-content h3 { font-size: 18px; }
-        .post-detail-content p { margin-bottom: 16px; }
-        .post-detail-content code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 14px; }
-        .post-detail-content pre { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 10px; overflow-x: auto; margin: 16px 0; }
-        .post-detail-content pre code { background: none; padding: 0; color: inherit; }
-        .post-detail-content blockquote { border-left: 4px solid var(--primary); padding: 12px 16px; background: #f8fafc; margin: 16px 0; border-radius: 0 8px 8px 0; }
-        .post-detail-content a { color: var(--primary); }
-        .post-detail-content img { max-width: 100%; border-radius: 8px; margin: 16px 0; }
-        .post-detail-content ul, .post-detail-content ol { padding-left: 24px; margin-bottom: 16px; }
-        .post-detail-content li { margin-bottom: 6px; }
-        .post-detail-content strong { font-weight: 700; }
-        .post-detail-footer { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border); }
-        .back-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.15s; }
-        .back-btn:hover { background: var(--surface); border-color: var(--primary); color: var(--primary); }
-      </style>`;
-
-    // Update header nav active state
-    document.querySelectorAll('.header-nav a').forEach(a => a.classList.remove('active'));
+      </div>`;
+    document.getElementById('navHome').style.display = '';
   }
 
   // ── Simple markdown converter ──
   function simpleMarkdown(text) {
     if (!text) return '';
     return escapeHtml(text)
-      // Code blocks
       .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
-      // Inline code
       .replace(/`([^`]+)`/g, '<code>$1</code>')
-      // Bold
       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-      // Italic
       .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-      // Headers
       .replace(/^### (.+)$/gm, '<h3>$1</h3>')
       .replace(/^## (.+)$/gm, '<h2>$1</h2>')
       .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-      // Links
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-      // Images
       .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">')
-      // Blockquote
       .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
-      // Paragraphs (double newline)
       .split(/\n\n+/)
       .map(p => {
         p = p.trim();
@@ -429,38 +272,26 @@
       .join('\n');
   }
 
-  const convertMarkdown = true; // toggle for simple markdown rendering
-
   function renderPosts(posts) {
-    const container = document.getElementById('posts');
+    const container = document.getElementById('postsList');
     container.innerHTML = posts.map(post => `
-      <a href="/posts/${post.slug}" class="post-card">
-        <div class="post-card-top">
-          <div class="post-card-title">${escapeHtml(post.title)}</div>
-          ${post.coverImage ? `<img src="${post.coverImage}" alt="" class="post-card-cover" loading="lazy">` : ''}
+      <a href="/posts/${post.slug}" class="post-item" style="text-decoration:none;color:inherit;">
+        <div class="post-title">${escapeHtml(post.title)}</div>
+        <div class="post-meta">
+          <span>${escapeHtml(post.author?.name || 'Anonymous')}</span>
+          <span>·</span>
+          <span>${formatDate(post.publishedAt)}</span>
+          <span>·</span>
+          <span>${estimateReadTime(post.content)} 分钟</span>
         </div>
-        <div class="post-card-meta">
-          <span>👤 ${post.author?.name || 'Anonymous'}</span>
-          <span class="dot"></span>
-          <span>📅 ${formatDate(post.publishedAt)}</span>
-          <span class="dot"></span>
-          <span>⏱️ ${estimateReadTime(post.content)} 分钟</span>
-        </div>
-        ${post.excerpt ? `<div class="post-card-excerpt">${escapeHtml(post.excerpt)}</div>` : ''}
-        <div class="post-card-footer">
-          <div class="post-card-tags">
-            ${(post.tags || []).slice(0, 3).map(t => `<span class="tag">${escapeHtml(t.name || t)}</span>`).join('')}
-          </div>
-          <div class="read-more">阅读全文 →</div>
-        </div>
+        ${post.excerpt ? `<div class="post-excerpt">${escapeHtml(post.excerpt)}</div>` : ''}
       </a>
     `).join('');
   }
 
   function estimateReadTime(content) {
     if (!content) return 1;
-    const words = content.trim().split(/\s+/).length;
-    return Math.max(1, Math.ceil(words / 200));
+    return Math.max(1, Math.ceil(content.trim().split(/\s+/).length / 200));
   }
 
   function escapeHtml(text) {
@@ -476,33 +307,33 @@
     return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
-  // ── Login guard for write operations ──
+  // ── Write guard ──
   function goWrite(e) {
     if (e && e.preventDefault) e.preventDefault();
-    const token = localStorage.getItem('cloudblog_token');
-    if (!token) {
-      // Not logged in → redirect to login with return URL
-      const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
-      window.location.href = '/admin/login.html?return_url=' + returnUrl;
+    const session = localStorage.getItem('cloudblog_session');
+    if (!session) {
+      window.location.href = '/admin/login.html?return_url=' + encodeURIComponent(window.location.pathname);
       return false;
     }
     window.location.href = '/write.html';
     return false;
   }
 
-  // ── Router init ──
+  function goHome(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    window.location.href = '/';
+    return false;
+  }
+
+  // ── Init ──
   async function init() {
     const route = getRoute();
     if (route.page === 'post') {
+      document.getElementById('navHome').style.display = '';
       await loadPost(route.slug);
     } else {
       await loadPosts();
     }
-  }
-
-  // ── Service Worker ──
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
 
   init();
