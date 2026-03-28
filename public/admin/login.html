@@ -52,9 +52,11 @@
   </div>
 
   <script>
-    // If already logged in, redirect to dashboard
+    // If already logged in, redirect to dashboard or return_url
     if (localStorage.getItem('cloudblog_token')) {
-      window.location.href = '/admin/index.html';
+      const params = new URLSearchParams(window.location.search);
+      const returnUrl = params.get('return_url');
+      window.location.href = returnUrl ? decodeURIComponent(returnUrl) : '/admin/index.html';
     }
 
     async function doLogin() {
@@ -77,12 +79,20 @@
           headers: { 'Authorization': `Bearer ${secret}` }
         });
 
-        if (res.ok || res.status === 401) {
-          // Store token
+        if (res.ok) {
+          // Store token only on successful auth
           localStorage.setItem('cloudblog_token', secret);
-          window.location.href = '/admin/index.html';
+          // Also sync to api_secret for write page compatibility
+          localStorage.setItem('cloudblog_api_secret', secret);
+          // Redirect to return_url if provided, otherwise default to admin dashboard
+          const params = new URLSearchParams(window.location.search);
+          const returnUrl = params.get('return_url');
+          window.location.href = returnUrl ? decodeURIComponent(returnUrl) : '/admin/index.html';
         } else {
-          throw new Error('Invalid response');
+          errorEl.textContent = '密钥无效，请重试';
+          errorEl.classList.add('show');
+          btn.disabled = false;
+          btn.textContent = '登录';
         }
       } catch (e) {
         errorEl.textContent = '密钥无效，请重试';

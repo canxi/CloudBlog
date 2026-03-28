@@ -106,6 +106,32 @@
   <div class="toast" id="toast"></div>
 
   <script>
+    // Login guard: redirect to login if not authenticated or token invalid
+    (async function() {
+      const token = localStorage.getItem('cloudblog_token');
+      if (!token) {
+        const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.href = '/admin/login.html?return_url=' + returnUrl;
+        return;
+      }
+      // Validate token by calling protected API
+      try {
+        const res = await fetch('/api/admin/comments', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) {
+          // Token invalid → redirect to login
+          localStorage.removeItem('cloudblog_token');
+          localStorage.removeItem('cloudblog_api_secret');
+          const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+          window.location.href = '/admin/login.html?return_url=' + returnUrl;
+          return;
+        }
+      } catch (e) {
+        // Network error → allow access, user will get error on save
+      }
+    })();
+
     let currentTags = [];
     let currentMode = 'write';
     let isSaving = false;

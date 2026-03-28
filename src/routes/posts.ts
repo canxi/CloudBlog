@@ -2,7 +2,6 @@
  * Posts API - Blog post CRUD operations
  */
 
-import { syncBacklinks } from './backlinks';
 import { getSessionUser } from '../middleware/auth';
 
 async function adminAuth(request: Request, env: Env) {
@@ -213,9 +212,6 @@ async function handleCreate(request: Request, env: Env): Promise<Response> {
       .run();
   }
 
-  // Sync backlinks
-  await syncBacklinks(env.DB, postId, content);
-
   return jsonResponse({ id: postId, slug: postSlug }, 201);
 }
 
@@ -270,11 +266,6 @@ async function handleUpdate(request: Request, env: Env, slug: string): Promise<R
     .prepare(`UPDATE posts SET ${updates.join(', ')} WHERE id = ?`)
     .bind(...bindings)
     .run();
-
-  // Sync backlinks if content changed
-  if (body.content) {
-    await syncBacklinks(env.DB, postId, body.content);
-  }
 
   return jsonResponse({ success: true });
 }

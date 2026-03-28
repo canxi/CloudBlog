@@ -40,10 +40,6 @@
 			"id": "80a035bc87e041848297f47b2e4c03e5"
 		},
 		{
-			"binding": "ANALYTICS_KV",
-			"id": "f45f55380661453dbab55564073ad007"
-		},
-		{
 			"binding": "SEARCH_KV",
 			"id": "ab7e944d29e245c694342fb877c72f91"
 		}

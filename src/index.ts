@@ -4,12 +4,6 @@
  */
 
 import { handleMigrationRequest } from './routes/migration';
-import { handleAnalyticsRequest } from './routes/analytics';
-import { handleExportRequest } from './routes/export';
-import { handleSnippetsRequest } from './routes/snippets';
-import { handleNotesRequest } from './routes/notes';
-import { handleBacklinksRequest } from './routes/backlinks';
-import { handleRevisionsRequest } from './routes/revisions';
 import { handleSearchRequest } from './routes/search';
 import { handleMediaRequest } from './routes/media';
 import { handleCommentsRequest } from './routes/comments';
@@ -69,24 +63,6 @@ export default {
 		// API routes
 		if (url.pathname.startsWith('/api/migration')) {
 			return await handleMigrationRequest(request, env);
-		}
-		if (url.pathname.startsWith('/api/analytics')) {
-			return handleAnalyticsRequest(request, env);
-		}
-		if (url.pathname.startsWith('/api/export')) {
-			return await handleExportRequest(request, env);
-		}
-		if (url.pathname.startsWith('/api/snippets')) {
-			return await handleSnippetsRequest(request, env);
-		}
-		if (url.pathname.startsWith('/api/notes')) {
-			return await handleNotesRequest(request, env);
-		}
-		if (url.pathname.startsWith('/api/backlinks')) {
-			return await handleBacklinksRequest(request, env);
-		}
-		if (url.pathname.startsWith('/api/revisions')) {
-			return await handleRevisionsRequest(request, env);
 		}
 		if (url.pathname.startsWith('/api/search')) {
 			return await handleSearchRequest(request, env);
