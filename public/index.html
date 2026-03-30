@@ -35,21 +35,28 @@
       border-bottom: 1px solid var(--border);
       padding: 0 20px;
       height: 56px;
-      display: flex; align-items: center; justify-content: space-between;
+      display: flex; align-items: center; justify-content: center;
       position: sticky; top: 0; z-index: 100;
     }
-    .header-brand { font-size: 16px; font-weight: 700; color: var(--text); text-decoration: none; letter-spacing: -0.3px; }
-    .header-nav { display: flex; align-items: center; gap: 4px; }
+    .header-inner {
+      width: 100%;
+      max-width: 680px;
+      display: flex; align-items: center; justify-content: center;
+      gap: 16px;
+    }
+    .header-brand { font-size: 16px; font-weight: 700; color: var(--text); text-decoration: none; letter-spacing: -0.3px; margin-right: auto; }
+    .header-nav { display: flex; align-items: center; gap: 6px; }
     .header-nav a {
       color: var(--text-secondary); text-decoration: none; font-size: 13px;
-      padding: 6px 12px; border-radius: 6px; transition: all 0.15s; font-weight: 500;
+      padding: 6px 14px; border-radius: 999px; transition: all 0.15s; font-weight: 500;
     }
     .header-nav a:hover { background: #f5f5f5; color: var(--text); }
     .btn-write {
       background: var(--primary) !important; color: white !important;
-      padding: 7px 14px !important; border-radius: 6px !important;
+      padding: 6px 14px !important; border-radius: 999px !important;
       font-weight: 600 !important; font-size: 13px !important;
     }
+    .btn-write:hover { opacity: 0.8 !important; background: var(--primary) !important; }
     .btn-write:hover { opacity: 0.85 !important; }
 
     /* ── Main ── */
@@ -137,11 +144,13 @@
 <body>
 
 <header>
-  <a href="/" class="header-brand">CloudBlog</a>
-  <nav class="header-nav">
-    <a href="/" id="navHome">首页</a>
-    <a href="/write.html" class="btn-write" onclick="return goWrite(event)">写文章</a>
-  </nav>
+  <div class="header-inner">
+    <a href="/" class="header-brand">CloudBlog</a>
+    <nav class="header-nav">
+      <a href="/" id="navHome">首页</a>
+      <a href="/write.html" class="btn-write" onclick="return goWrite(event)">写文章</a>
+    </nav>
+  </div>
 </header>
 
 <main id="mainContent">
