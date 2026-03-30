@@ -3,6 +3,8 @@
  * Full-text search using KV index
  */
 
+import { getSessionUser } from '../middleware/auth';
+
 const SEARCH_INDEX_KEY = 'search:index';
 
 interface SearchDocument {
@@ -127,9 +129,11 @@ export async function handleSearchRequest(request: Request, env: Env): Promise<R
   }
   
   // POST /api/search/index - Rebuild search index (admin only)
+  // [CLEANUP] API_SECRET auth removed - session-only auth
+  // --完成: 移除 API_SECRET 硬编码鉴权 --
   if (request.method === 'POST') {
-    const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-    if (token !== env.API_SECRET) {
+    const user = await getSessionUser(request, env.DB);
+    if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
     

@@ -8,6 +8,7 @@ import { parseMarkdownFiles } from '../utils/markdown-importer';
 import { downloadImage } from '../utils/r2-storage';
 import { ImportProgressTracker } from '../utils/import-progress';
 import type { ImportBatch, ImportError, WordPressPost, MarkdownPost } from '../types/migration';
+import { getSessionUser } from '../middleware/auth';
 
 // In-memory queue for processing (in production, use Durable Objects)
 const processingQueue = new Map<string, boolean>();
@@ -16,17 +17,15 @@ function generateId(): string {
   return crypto.randomUUID();
 }
 
-function requireAuth(request: Request, env: Env): string | null {
-  const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-  if (token !== env.API_SECRET) {
-    return null;
-  }
-  return 'authenticated'; // simplified for demo
+// [CLEANUP] API_SECRET auth removed - session-only auth
+// --完成: 移除 API_SECRET 硬编码鉴权 --
+async function requireAuth(request: Request, env: Env) {
+  return await getSessionUser(request, env.DB);
 }
 
 // POST /api/migration/wordpress - Start WordPress XML import
 async function handleWordPressImport(request: Request, env: Env): Promise<Response> {
-  const auth = requireAuth(request, env);
+  const auth = await requireAuth(request, env);
   if (!auth) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -97,7 +96,7 @@ async function handleWordPressImport(request: Request, env: Env): Promise<Respon
 
 // POST /api/migration/markdown - Start Markdown batch import
 async function handleMarkdownImport(request: Request, env: Env): Promise<Response> {
-  const auth = requireAuth(request, env);
+  const auth = await requireAuth(request, env);
   if (!auth) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -184,7 +183,7 @@ async function handleProgress(request: Request, env: Env): Promise<Response> {
 
 // GET /api/migration/batches - List all batches
 async function handleListBatches(request: Request, env: Env): Promise<Response> {
-  const auth = requireAuth(request, env);
+  const auth = await requireAuth(request, env);
   if (!auth) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -195,7 +194,7 @@ async function handleListBatches(request: Request, env: Env): Promise<Response> 
 
 // POST /api/migration/image - Download single image to R2
 async function handleImageUpload(request: Request, env: Env): Promise<Response> {
-  const auth = requireAuth(request, env);
+  const auth = await requireAuth(request, env);
   if (!auth) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }

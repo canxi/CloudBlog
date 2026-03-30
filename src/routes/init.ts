@@ -38,11 +38,12 @@ export async function ensureAdminUser(env: Env): Promise<void> {
   const hashedPassword = 'plain:' + ADMIN_PASSWORD; // Simple prefix for initial setup
   const now = Math.floor(Date.now() / 1000);
 
+  // --完成: 强制改密 - 管理员首次登录必须修改密码
   await env.DB
     .prepare(`
-      INSERT INTO users (id, username, email, password_hash, display_name, role, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (id, username, email, password_hash, display_name, role, must_change_password, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
-    .bind(adminId, ADMIN_USERNAME, 'admin@cloudblog.local', hashedPassword, 'Administrator', 'admin', now, now)
+    .bind(adminId, ADMIN_USERNAME, 'admin@cloudblog.local', hashedPassword, 'Administrator', 'admin', 1, now, now)
     .run();
 }

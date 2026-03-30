@@ -104,7 +104,12 @@
           localStorage.setItem('cloudblog_session', JSON.stringify(data.user));
           const params = new URLSearchParams(window.location.search);
           const returnUrl = params.get('return_url');
-          window.location.href = returnUrl ? decodeURIComponent(returnUrl) : '/admin/index.html';
+          // --完成: 强制改密 - 如果必须修改密码，重定向到修改密码提示页 --
+          if (data.user && data.user.must_change_password) {
+            window.location.href = '/admin/index.html?force_pw_change=1';
+          } else {
+            window.location.href = returnUrl ? decodeURIComponent(returnUrl) : '/admin/index.html';
+          }
         } else {
           errorEl.textContent = data.error || '登录失败，请重试';
           errorEl.classList.add('show');

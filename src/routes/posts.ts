@@ -4,17 +4,10 @@
 
 import { getSessionUser } from '../middleware/auth';
 
+// [CLEANUP] API_SECRET fallback removed - session-only auth
+// --完成: 移除 API_SECRET 硬编码鉴权 --
 async function adminAuth(request: Request, env: Env) {
-  const sessionUser = await getSessionUser(request, env.DB);
-  if (sessionUser) return sessionUser;
-  
-  // Legacy API_SECRET auth (for backwards compatibility)
-  const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-  if (token === env.API_SECRET) {
-    return { id: 'api', username: 'api', email: '', displayName: 'API Client', role: 'admin' };
-  }
-  
-  return null;
+  return await getSessionUser(request, env.DB);
 }
 
 function jsonResponse(data: unknown, status = 200): Response {

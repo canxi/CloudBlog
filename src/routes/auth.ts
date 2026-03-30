@@ -58,9 +58,9 @@ async function handleLogin(request: Request, env: Env): Promise<Response> {
 
   // Find user by username
   const user = await env.DB
-    .prepare(`SELECT id, username, email, password_hash, role FROM users WHERE username = ?`)
+    .prepare(`SELECT id, username, email, password_hash, role, must_change_password FROM users WHERE username = ?`)
     .bind(username)
-    .first() as { id: string; username: string; email: string; password_hash: string; role: string } | undefined;
+    .first() as { id: string; username: string; email: string; password_hash: string; role: string; must_change_password: number } | undefined;
 
   if (!user) {
     return jsonResponse({ error: '用户名或密码错误' }, 401);
@@ -93,6 +93,7 @@ async function handleLogin(request: Request, env: Env): Promise<Response> {
   headers.set('Content-Type', 'application/json');
   headers.set('Set-Cookie', createSessionCookie(sessionId, SESSION_DURATION));
 
+  // --完成: 强制改密 - 返回 must_change_password 标志 --
   return new Response(JSON.stringify({
     success: true,
     user: {
@@ -100,6 +101,7 @@ async function handleLogin(request: Request, env: Env): Promise<Response> {
       username: user.username,
       email: user.email,
       role: user.role,
+      must_change_password: !!user.must_change_password,
     }
   }), { status: 200, headers });
 }
@@ -174,10 +176,11 @@ async function handleChangePassword(request: Request, env: Env): Promise<Respons
     return jsonResponse({ error: '当前密码错误' }, 401);
   }
 
-  // Update to new password (hashed)
+  // Update to new password (hashed) and clear must_change_password flag
+  // --完成: 强制改密 - 修改密码后清除 must_change_password 标志 --
   const newHash = hashPassword(newPassword);
   await env.DB
-    .prepare(`UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?`)
+    .prepare(`UPDATE users SET password_hash = ?, must_change_password = 0, updated_at = ? WHERE id = ?`)
     .bind(newHash, Math.floor(Date.now() / 1000), user.id)
     .run();
 

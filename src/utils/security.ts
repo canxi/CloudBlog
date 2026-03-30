@@ -102,26 +102,6 @@ export function isValidSlug(slug: string): boolean {
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 100;
 }
 
-// Require auth with rate limiting
-export async function requireAuthRateLimited(
-  request: Request,
-  env: Env,
-  maxRequests = 300
-): Promise<{ authed: boolean; rateLimited: boolean; response?: Response }> {
-  const rate = await checkRateLimit(request, env, maxRequests);
-  if (!rate.allowed) {
-    return {
-      authed: false,
-      rateLimited: true,
-      response: jsonResponse(
-        { error: 'Too many requests', retryAfter: rate.resetIn },
-        429
-      ),
-    };
-  }
-
-  const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-  const authed = token === env.API_SECRET;
-
-  return { authed, rateLimited: false };
-}
+// [CLEANUP] requireAuthRateLimited removed - API_SECRET auth no longer used
+// Session-based auth is enforced via getSessionUser() in middleware/auth.ts
+// --完成: 移除 API_SECRET 硬编码鉴权 --

@@ -57,17 +57,10 @@ function getGravatarUrl(email: string): string {
   return `https://www.gravatar.com/avatar/${hash}?d=identicon&s=80`;
 }
 
+// [CLEANUP] API_SECRET fallback removed - session-only auth
+// --完成: 移除 API_SECRET 硬编码鉴权 --
 async function adminAuth(request: Request, env: Env) {
-  // Try session auth first (JWT-equivalent for browser clients)
-  const sessionUser = await getSessionUser(request, env.DB);
-  if (sessionUser) return sessionUser;
-  // Fallback to API_SECRET for programmatic clients (backwards compat)
-  const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-  if (token === env.API_SECRET) {
-    // Return a minimal user object for API_SECRET auth
-    return { id: 'api', username: 'api', email: '', displayName: 'API Client', role: 'admin' };
-  }
-  return null;
+  return await getSessionUser(request, env.DB);
 }
 
 function jsonResponse(data: unknown, status = 200): Response {

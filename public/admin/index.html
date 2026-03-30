@@ -165,6 +165,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
+  // --完成: 强制改密 - 首次登录必须修改密码 --
   function getSession() {
     const s = localStorage.getItem('cloudblog_session');
     return s ? JSON.parse(s) : null;
@@ -176,6 +177,19 @@
       return false;
     }
     return true;
+  }
+
+  // Check if user must change password - force overlay if required
+  function checkMustChangePassword() {
+    const session = getSession();
+    if (session && session.must_change_password) {
+      // Show forced password change overlay
+      document.getElementById('passwordModal').classList.remove('hidden');
+      // Prevent closing without changing password
+      document.getElementById('passwordModal').querySelector('.modal-actions .cancel-btn').style.display = 'none';
+      return true;
+    }
+    return false;
   }
 
   function logout() {
@@ -264,6 +278,15 @@
       if (res.ok) {
         showToast('密码修改成功');
         closePasswordModal();
+        // --完成: 强制改密 - 清除 session 中的 must_change_password 标志 --
+        const session = getSession();
+        if (session) {
+          session.must_change_password = false;
+          localStorage.setItem('cloudblog_session', JSON.stringify(session));
+        }
+        // Restore cancel button for future voluntary changes
+        const cancelBtn = document.querySelector('#passwordModal .modal-actions .cancel-btn');
+        if (cancelBtn) cancelBtn.style.display = '';
       } else {
         errorEl.textContent = data.error || '修改失败';
         errorEl.classList.add('show');
@@ -429,6 +452,17 @@
   if (!requireAuth()) {} else {
     const session = getSession();
     document.getElementById('userInfo').textContent = session?.username || 'Admin';
+
+    // --完成: 强制改密 - 检查 URL 参数或 session 中的 must_change_password --
+    const urlParams = new URLSearchParams(window.location.search);
+    const forcePwChange = urlParams.get('force_pw_change') === '1';
+    if (forcePwChange || checkMustChangePassword()) {
+      // Force show password change modal, hide cancel button
+      document.getElementById('passwordModal').classList.remove('hidden');
+      const cancelBtn = document.querySelector('#passwordModal .modal-actions .cancel-btn');
+      if (cancelBtn) cancelBtn.style.display = 'none';
+    }
+
     loadStats();
     loadComments();
   }

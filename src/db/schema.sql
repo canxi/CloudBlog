@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     avatar_url TEXT,
     bio TEXT,
     role TEXT DEFAULT 'user' CHECK(role IN ('admin', 'author', 'user')),
+    must_change_password INTEGER DEFAULT 0,
     created_at INTEGER NOT NULL DEFAULT (unixepoch()),
     updated_at INTEGER NOT NULL DEFAULT (unixepoch())
 );

@@ -10,6 +10,7 @@ export interface AuthUser {
   email: string;
   displayName: string | null;
   role: string;
+  mustChangePassword: boolean; // --完成: 强制改密 --
 }
 
 export interface AuthContext {
@@ -27,7 +28,7 @@ export async function getSessionUser(
   const now = Math.floor(Date.now() / 1000);
   const session = await db
     .prepare(
-      `SELECT s.*, u.id as user_id, u.username, u.email, u.display_name, u.role
+      `SELECT s.*, u.id as user_id, u.username, u.email, u.display_name, u.role, u.must_change_password
        FROM sessions s
        JOIN users u ON s.user_id = u.id
        WHERE s.id = ? AND s.expires_at > ?`
@@ -39,16 +40,19 @@ export async function getSessionUser(
       email: string;
       display_name: string | null;
       role: string;
+      must_change_password: number;
     }>();
 
   if (!session) return null;
 
+  // --完成: 强制改密 - 返回 must_change_password 标志 --
   return {
     id: session.user_id,
     username: session.username,
     email: session.email,
     displayName: session.display_name,
     role: session.role,
+    mustChangePassword: !!session.must_change_password,
   };
 }
 
