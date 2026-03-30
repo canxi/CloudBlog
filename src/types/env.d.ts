@@ -13,9 +13,6 @@ interface Env {
 	// KV for search index
 	SEARCH_KV: KVNamespace;
 
-	// API secret for authentication
-	API_SECRET: string;
-
 	// R2 public URL (e.g., https://your-account.r2.cloudflarestorage.com/bucket)
 	R2_PUBLIC_URL?: string;
 }
