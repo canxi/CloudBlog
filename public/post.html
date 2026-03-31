@@ -309,25 +309,29 @@
   async function loadComments(slug) {
     try {
       const res = await fetch(`/api/comments/${encodeURIComponent(slug)}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        console.error('Comments API error:', res.status);
+        return;
+      }
       const data = await res.json();
+      // API returns array of approved comments directly
       const comments = Array.isArray(data) ? data : (data.comments || []);
-      renderComments(comments.filter(c => c.status === 'approved'));
+      renderComments(comments);
     } catch (e) {
-      // silently fail
+      console.error('Failed to load comments:', e);
     }
   }
 
   function renderComments(comments) {
     const container = document.getElementById('commentsList');
-    if (comments.length === 0) {
+    if (!comments || comments.length === 0) {
       container.innerHTML = '<div class="empty-state">还没有评论，来抢沙发吧！</div>';
       return;
     }
     container.innerHTML = comments.map(c => `
       <div class="comment-item">
         <div class="comment-header">
-          <img src="${c.avatar || 'https://www.gravatar.com/avatar/0?d=identicon&s=80'}" class="comment-avatar" alt="">
+          <img src="${c.avatar || 'https://www.gravatar.com/avatar/0?d=identicon&s=80'}" class="comment-avatar" alt="" onerror="this.src='https://www.gravatar.com/avatar/0?d=identicon&s=80'">
           <span class="comment-author">${escapeHtml(c.author)}</span>
           <span class="comment-date">${formatDate(c.createdAt)}</span>
         </div>

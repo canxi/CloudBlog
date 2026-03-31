@@ -73,12 +73,16 @@ async function handleList(request: Request, env: Env): Promise<Response> {
 
 // GET /api/posts/:slug - Get single post by slug
 async function handleGetBySlug(request: Request, env: Env, slug: string): Promise<Response> {
+  // Check if user is authenticated admin - allow fetching drafts for editing
+  const user = await getSessionUser(request, env.DB);
+  const isAdmin = user && user.role === 'admin';
+
   const result = await env.DB
     .prepare(`
       SELECT p.*, u.display_name as author_name, u.avatar_url as author_avatar
       FROM posts p
       LEFT JOIN users u ON p.author_id = u.id
-      WHERE p.slug = ? AND p.status = 'published'
+      WHERE p.slug = ? ${isAdmin ? '' : "AND p.status = 'published'"}
     `)
     .bind(slug)
     .first();

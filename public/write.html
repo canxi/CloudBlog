@@ -98,6 +98,7 @@
     <div class="form-group">
       <label>正文 *</label>
       <textarea id="content" placeholder="使用 Markdown 编写文章内容..."></textarea>
+      <div id="previewContainer" class="markdown-body" style="display:none; padding:16px; background:#fafafa; border-radius:8px; min-height:200px;"></div>
     </div>
   </main>
 
@@ -234,8 +235,17 @@
         if (res.ok) {
           data = await res.json();
           showToast(status === 'published' ? '发布成功！' : '草稿已保存');
-          const redirectSlug = data.slug || editSlug;
-          setTimeout(() => { window.location.href = `/posts/${redirectSlug}`; }, 800);
+          if (status === 'published') {
+            const redirectSlug = data.slug || editSlug;
+            setTimeout(() => { window.location.href = `/posts/${redirectSlug}`; }, 800);
+          } else {
+            // Draft saved - update URL with edit slug if new, stay on page
+            if (data.slug && !editSlug) {
+              history.replaceState(null, '', `?edit=${encodeURIComponent(data.slug)}`);
+              editSlug = data.slug; // Update the global so future saves use PUT
+            }
+            // Stay on write page after draft save
+          }
         } else if (res.status === 401) {
           showToast('请先登录');
           setTimeout(() => { window.location.href = '/admin/login.html'; }, 1500);
@@ -256,14 +266,45 @@
       currentMode = mode;
       document.getElementById('writeBtn').classList.toggle('active', mode === 'write');
       document.getElementById('previewBtn').classList.toggle('active', mode === 'preview');
-      const content = document.getElementById('content');
+      const textarea = document.getElementById('content');
+      const preview = document.getElementById('previewContainer');
       if (mode === 'preview') {
-        content.style.fontFamily = 'inherit';
-        content.style.whiteSpace = 'pre-wrap';
+        textarea.style.display = 'none';
+        preview.style.display = 'block';
+        preview.innerHTML = renderMarkdown(textarea.value);
       } else {
-        content.style.fontFamily = "'SF Mono', 'Consolas', monospace";
-        content.style.whiteSpace = 'pre';
+        textarea.style.display = 'block';
+        preview.style.display = 'none';
       }
+    }
+
+    function renderMarkdown(content) {
+      if (!content) return '<p style="color:#999">暂无内容</p>';
+      let html = escapeHtml(content);
+      // Code blocks
+      html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+        return `<pre><code class="language-${lang}">${code.trim()}</code></pre>`;
+      });
+      // Inline code
+      html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+      // Bold
+      html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      // Italic
+      html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+      // Headings
+      html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+      html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+      html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+      // Blockquote
+      html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+      // Lists
+      html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+      html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+      // Paragraphs (double newline)
+      html = html.replace(/\n\n+/g, '</p><p>');
+      // Single newlines in paragraphs
+      html = html.replace(/\n/g, '<br>');
+      return `<p>${html}</p>`;
     }
 
     function escapeHtml(str) {
