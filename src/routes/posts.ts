@@ -87,20 +87,30 @@ async function handleAdminList(request: Request, env: Env): Promise<Response> {
     `)
     .all();
 
-  const posts = (result.results as Record<string, unknown>[]).map(row => ({
-    id: String(row.id),
-    title: String(row.title),
-    slug: String(row.slug),
-    excerpt: row.excerpt ? String(row.excerpt) : '',
-    coverImage: row.cover_image ? String(row.cover_image) : '',
-    status: String(row.status),
-    publishedAt: row.published_at ? Number(row.published_at) : null,
-    createdAt: Number(row.created_at),
-    updatedAt: Number(row.updated_at),
-    author: {
-      name: row.author_name ? String(row.author_name) : 'Unknown',
-      avatar: row.author_avatar ? String(row.author_avatar) : '',
-    },
+  const posts = await Promise.all((result.results as Record<string, unknown>[]).map(async row => {
+    // Fetch tags for each post
+    const tagRows = await env.DB
+      .prepare(`SELECT t.name, t.slug FROM tags t JOIN post_tags pt ON t.id = pt.tag_id WHERE pt.post_id = ?`)
+      .bind(String(row.id))
+      .all();
+    const tags = (tagRows.results as { name: string; slug: string }[]).map(t => t.name);
+
+    return {
+      id: String(row.id),
+      title: String(row.title),
+      slug: String(row.slug),
+      excerpt: row.excerpt ? String(row.excerpt) : '',
+      coverImage: row.cover_image ? String(row.cover_image) : '',
+      status: String(row.status),
+      publishedAt: row.published_at ? Number(row.published_at) : null,
+      createdAt: Number(row.created_at),
+      updatedAt: Number(row.updated_at),
+      tags,
+      author: {
+        name: row.author_name ? String(row.author_name) : 'Unknown',
+        avatar: row.author_avatar ? String(row.author_avatar) : '',
+      },
+    };
   }));
 
   return jsonResponse({ posts });
