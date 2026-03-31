@@ -114,15 +114,56 @@
     .toast.show { opacity: 1; }
 
     @media (max-width: 640px) {
-      article { padding: 20px 14px 50px; }
-      header { padding: 0 12px; }
-      .header-inner { max-width: 100%; }
-      .header-nav a { padding: 5px 10px; font-size: 12px; }
-      .btn-write { padding: 5px 10px !important; font-size: 12px !important; }
-      .article-title { font-size: 20px; }
-      .article-body { font-size: 14px; line-height: 1.7; }
-      .article-body .markdown-body pre { padding-top: 36px; }
-      .article-body .markdown-body pre code { font-size: 12px; padding: 12px; }
+      /* Header */
+      header { padding: 0 12px !important; height: 50px; }
+      .header-inner { max-width: 100% !important; }
+      .header-brand { font-size: 15px; }
+      .header-nav a { padding: 4px 8px !important; font-size: 12px !important; }
+      .btn-write { padding: 4px 10px !important; font-size: 12px !important; }
+
+      /* Article */
+      article { padding: 16px 14px 50px !important; }
+      .article-header { margin-bottom: 20px; }
+      .article-title { font-size: 20px !important; line-height: 1.3; margin-bottom: 10px; }
+      .article-meta { font-size: 11px !important; gap: 6px !important; }
+      .article-cover { max-height: 200px !important; margin-bottom: 20px; }
+      .article-tags { gap: 6px !important; margin-bottom: 14px; }
+      .tag { font-size: 11px !important; padding: 3px 8px !important; }
+      .article-body { font-size: 14px !important; line-height: 1.7 !important; }
+
+      /* Markdown content */
+      .article-body .markdown-body { font-size: 14px !important; }
+      .article-body .markdown-body h1 { font-size: 18px !important; }
+      .article-body .markdown-body h2 { font-size: 16px !important; }
+      .article-body .markdown-body h3 { font-size: 15px !important; }
+      .article-body .markdown-body p { margin-bottom: 12px !important; }
+      .article-body .markdown-body pre { margin: 12px 0 !important; padding-top: 36px !important; }
+      .article-body .markdown-body pre code { font-size: 12px !important; padding: 10px 12px !important; }
+      .article-body .markdown-body blockquote { margin: 12px 0 !important; padding: 8px 12px !important; }
+      .article-body .markdown-body ul, .article-body .markdown-body ol { padding-left: 18px !important; margin-bottom: 12px !important; }
+      .article-body .markdown-body img { margin: 10px 0 !important; }
+
+      /* Comments */
+      .comments-section { margin-top: 32px !important; padding-top: 24px !important; }
+      .comments-title { font-size: 16px !important; margin-bottom: 16px !important; }
+      .comment-form { margin-bottom: 24px !important; }
+      .comment-form h4 { font-size: 14px !important; margin-bottom: 10px !important; }
+      .comment-input { padding: 10px !important; font-size: 14px !important; min-height: 70px !important; }
+      .comment-meta { flex-direction: column !important; gap: 6px !important; }
+      .comment-meta input { font-size: 13px !important; padding: 8px 10px !important; }
+      .btn { padding: 8px 14px !important; font-size: 13px !important; }
+      .comments-list { gap: 10px !important; }
+      .comment-item { padding: 12px !important; border-radius: 8px !important; }
+      .comment-header { flex-wrap: wrap !important; gap: 6px !important; }
+      .comment-author { font-size: 13px !important; }
+      .comment-content { font-size: 13px !important; }
+
+      /* Loading/error states */
+      .loading, .error-state { padding: 40px 14px !important; }
+      .empty-state { padding: 30px 14px !important; }
+
+      /* Toast */
+      .toast { padding: 8px 16px !important; font-size: 13px !important; bottom: 16px !important; }
     }
   </style>
 </head>
