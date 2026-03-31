@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.2.0/github-markdown.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     :root {
       --primary: #111;
@@ -67,16 +68,14 @@
     }
     .article-body { font-size: 15px; line-height: 1.8; }
     .article-body .markdown-body img { max-width: 100%; border-radius: 6px; margin: 14px 0; }
-    .article-body .markdown-body pre { background: #1e1e1e; color: #d4d4d4; border-radius: 10px; overflow: hidden; margin: 14px 0; box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
+    .article-body .markdown-body pre { background: #1e1e1e; color: #d4d4d4; border-radius: 10px; overflow: hidden; margin: 14px 0; box-shadow: 0 2px 12px rgba(0,0,0,0.15); position: relative; padding-top: 38px; }
     .article-body .markdown-body code { font-family: 'SF Mono', 'Consolas', monospace; font-size: 13px; background: #f5f5f5; padding: 2px 6px; border-radius: 4px; }
-    .article-body .markdown-body pre.mac-code { padding: 0; }
-    .article-body .markdown-body pre.mac-code .mac-bar { background: #2d2d2d; padding: 10px 14px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid #3d3d3d; }
-    .article-body .markdown-body pre.mac-code .mac-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
-    .article-body .markdown-body pre.mac-code .mac-dot.red { background: #ff5f56; }
-    .article-body .markdown-body pre.mac-code .mac-dot.yellow { background: #ffbd2e; }
-    .article-body .markdown-body pre.mac-code .mac-dot.green { background: #27c93f; }
-    .article-body .markdown-body pre.mac-code .mac-lang { margin-left: auto; font-size: 11px; color: #888; }
-    .article-body .markdown-body pre.mac-code code { display: block; padding: 14px 16px; font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; font-size: 13px; line-height: 1.6; color: #d4d4d4; overflow-x: auto; white-space: pre; background: none; border-radius: 0; }
+    .article-body .markdown-body pre code { background: none; padding: 14px 16px; display: block; font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; font-size: 13px; line-height: 1.6; color: #d4d4d4; overflow-x: auto; white-space: pre; border-radius: 0; }
+    .article-body .markdown-body .mac-dots { position: absolute; top: 12px; left: 14px; display: flex; gap: 6px; }
+    .article-body .markdown-body .mac-dots span { width: 12px; height: 12px; border-radius: 50%; }
+    .article-body .markdown-body .mac-dots span.red { background: #ff5f56; }
+    .article-body .markdown-body .mac-dots span.yellow { background: #ffbd2e; }
+    .article-body .markdown-body .mac-dots span.green { background: #27c93f; }
     .article-body .markdown-body blockquote { border-left: 3px solid var(--border); padding: 10px 14px; background: #fafafa; margin: 14px 0; border-radius: 0 6px 6px 0; }
 
     /* ── Comments ── */
@@ -227,42 +226,17 @@
 
   function renderMarkdown(content) {
     if (!content) return '';
-
-    // Extract code blocks first (preserve them untouched)
-    const codeBlocks = [];
-    let processed = content.replace(/```(\w*)\n?([\s\S]*?)```/g, (match, lang, code) => {
-      const langLabel = lang || 'code';
-      codeBlocks.push({ lang, html: `<pre class="mac-code"><div class="mac-bar"><span class="mac-dot red"></span><span class="mac-dot yellow"></span><span class="mac-dot green"></span><span class="mac-lang">${langLabel}</span></div><code class="language-${lang}">${escapeHtml(code.trim())}</code></pre>` });
-      return `\x00CODE_BLOCK_${codeBlocks.length - 1}\x00`;
+    marked.setOptions({
+      breaks: true,
+      gfm: true,
     });
-
-    // Now escape HTML and apply markdown
-    processed = escapeHtml(processed);
-
-    // Bold
-    processed = processed.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-    // Italic
-    processed = processed.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-    // Inline code
-    processed = processed.replace(/`([^`]+)`/g, '<code>$1</code>');
-    // Headings
-    processed = processed.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-    processed = processed.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-    processed = processed.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-    // Blockquote
-    processed = processed.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
-    // Lists
-    processed = processed.replace(/^- (.+)$/gm, '<li>$1</li>');
-    processed = processed.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
-    // Paragraphs (double newline)
-    processed = processed.replace(/\n\n+/g, '</p><p>');
-    // Single newlines in paragraphs
-    processed = processed.replace(/\n/g, '<br>');
-
-    // Restore code blocks
-    processed = processed.replace(/\x00CODE_BLOCK_(\d+)\x00/g, (match, index) => codeBlocks[index].html);
-
-    return `<p>${processed}</p>`;
+    let html = marked.parse(content);
+    // Add mac-style dots to code blocks
+    html = html.replace(/<pre><code(?: class="language-(\w+)")?>/g, (_, lang) => {
+      const label = lang || 'code';
+      return `<pre><div class="mac-dots"><span class="red"></span><span class="yellow"></span><span class="green"></span></div><code class="language-${label}">`;
+    });
+    return html;
   }
 
   let currentPost = null;
