@@ -458,7 +458,16 @@
 
   function formatTime(ts) {
     if (!ts) return '';
-    const d = new Date(ts > 1e12 ? ts : ts * 1000);
+    // Handle both Unix timestamps (seconds or ms) and ISO strings
+    let d;
+    if (typeof ts === 'string' || (typeof ts === 'number' && ts > 1e12)) {
+      // ISO string or already in milliseconds
+      d = new Date(ts);
+    } else {
+      // Unix timestamp in seconds
+      d = new Date(ts * 1000);
+    }
+    if (isNaN(d.getTime())) return '';
     const now = new Date();
     const diff = now - d;
     if (diff < 60000) return '刚刚';

@@ -207,7 +207,13 @@
 
   function formatDate(ts) {
     if (!ts) return '';
-    const d = new Date(ts > 1e12 ? ts : ts * 1000);
+    let d;
+    if (typeof ts === 'string' || (typeof ts === 'number' && ts > 1e12)) {
+      d = new Date(ts);
+    } else {
+      d = new Date(ts * 1000);
+    }
+    if (isNaN(d.getTime())) return '';
     return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
   }
 
