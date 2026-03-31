@@ -130,6 +130,24 @@ async function handleMe(request: Request, env: Env): Promise<Response> {
   return jsonResponse({ user });
 }
 
+// GET /api/auth/status - Get auth status (public, no auth required)
+async function handleStatus(request: Request, env: Env): Promise<Response> {
+  // Check if admin password has been changed (admin exists and must_change_password = 0)
+  const admin = await env.DB
+    .prepare(`SELECT id, must_change_password FROM users WHERE username = 'admin' LIMIT 1`)
+    .first() as { id: string; must_change_password: number } | undefined;
+
+  if (!admin) {
+    // No admin user exists yet - fresh install
+    return jsonResponse({ needsSetup: true, mustChangePassword: false });
+  }
+
+  return jsonResponse({
+    needsSetup: false,
+    mustChangePassword: !!admin.must_change_password
+  });
+}
+
 // POST /api/auth/change-password - Change password
 async function handleChangePassword(request: Request, env: Env): Promise<Response> {
   const user = await getSessionUser(request, env.DB);
@@ -203,6 +221,9 @@ export async function handleAuthRequest(request: Request, env: Env): Promise<Res
   }
   if (method === 'GET' && pathname === '/me') {
     return handleMe(request, env);
+  }
+  if (method === 'GET' && pathname === '/status') {
+    return handleStatus(request, env);
   }
 
   return jsonResponse({ error: 'Not found' }, 404);

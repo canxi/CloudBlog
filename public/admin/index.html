@@ -349,7 +349,7 @@
             <div class="comment-content">${escapeHtml(c.content)}</div>
             <div class="comment-actions">
               ${c.status !== 'approved' ? `<button class="action-btn approve-btn" onclick="moderateComment('${c.id}', 'approved')">通过</button>` : ''}
-              ${c.status !== 'spam' ? `<button class="action-btn spam-btn" onclick="moderateComment('${c.id}', 'spam')">Spam</button>` : ''}
+              ${c.status !== 'spam' ? `<button class="action-btn spam-btn" onclick="moderateComment('${c.id}', 'spam')">标记垃圾</button>` : ''}
               <button class="action-btn delete-btn" onclick="deleteComment('${c.id}')">删除</button>
             </div>
           </div>
@@ -395,6 +395,23 @@
     }
   }
 
+  async function deletePost(slug) {
+    if (!confirm('确定删除这篇文章？此操作不可恢复。')) return;
+    try {
+      const res = await apiFetch(`/api/posts/${encodeURIComponent(slug)}`, { method: 'DELETE' });
+      if (res.ok) {
+        showToast('已删除');
+        loadPosts();
+        loadStats();
+      } else {
+        const data = await res.json();
+        showToast(data.error || '删除失败');
+      }
+    } catch (e) {
+      showToast('删除失败');
+    }
+  }
+
   // ── Posts ──
   async function loadPosts() {
     const container = document.getElementById('postsList');
@@ -421,6 +438,8 @@
           </div>
           <div class="post-actions">
             <a href="/posts/${p.slug}" class="action-btn" style="background:#eff6ff;color:#1e40af" target="_blank">查看</a>
+            <a href="/write.html?edit=${encodeURIComponent(p.slug)}" class="action-btn" style="background:#f0fdf4;color:#166534">编辑</a>
+            <button class="action-btn delete-btn" onclick="deletePost('${escapeHtml(p.slug)}')">删除</button>
           </div>
         </div>
       `).join('');

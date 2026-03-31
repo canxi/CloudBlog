@@ -42,9 +42,11 @@
       width: 100%;
       max-width: 680px;
       display: flex; align-items: center; justify-content: center;
-      gap: 16px;
     }
-    .header-brand { font-size: 16px; font-weight: 700; color: var(--text); text-decoration: none; letter-spacing: -0.3px; margin-right: auto; }
+    .header-centered {
+      display: flex; align-items: center; gap: 16px;
+    }
+    .header-brand { font-size: 16px; font-weight: 700; color: var(--text); text-decoration: none; letter-spacing: -0.3px; }
     .header-nav { display: flex; align-items: center; gap: 6px; }
     .header-nav a {
       color: var(--text-secondary); text-decoration: none; font-size: 13px;
@@ -145,17 +147,22 @@
 
 <header>
   <div class="header-inner">
-    <a href="/" class="header-brand">CloudBlog</a>
-    <nav class="header-nav">
-      <a href="/" id="navHome">首页</a>
-      <a href="/write.html" class="btn-write" onclick="return goWrite(event)">写文章</a>
-    </nav>
+    <div class="header-centered">
+      <a href="/" class="header-brand">CloudBlog</a>
+      <nav class="header-nav">
+        <a href="/" id="navHome">首页</a>
+        <a href="/write.html" class="btn-write" onclick="return goWrite(event)">写文章</a>
+        <a href="/admin/index.html" id="navAdmin" style="display:none">管理</a>
+      </nav>
+    </div>
   </div>
 </header>
 
 <main id="mainContent">
   <div class="posts-list" id="skeleton">
-    ${[1,2,3].map(() => `<div class="skeleton-item"><div class="skeleton skel-title"></div><div class="skeleton skel-meta"></div></div>`).join('')}
+    <div class="skeleton-item"><div class="skeleton skel-title"></div><div class="skeleton skel-meta"></div></div>
+    <div class="skeleton-item"><div class="skeleton skel-title"></div><div class="skeleton skel-meta"></div></div>
+    <div class="skeleton-item"><div class="skeleton skel-title"></div><div class="skeleton skel-meta"></div></div>
   </div>
   <div class="posts-list" id="postsList" style="display:none"></div>
   <div class="empty-state" id="emptyState" style="display:none">
@@ -337,6 +344,11 @@
 
   // ── Init ──
   async function init() {
+    // Show admin link if logged in
+    if (localStorage.getItem('cloudblog_session')) {
+      document.getElementById('navAdmin').style.display = '';
+    }
+
     const route = getRoute();
     if (route.page === 'post') {
       document.getElementById('navHome').style.display = '';

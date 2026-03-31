@@ -41,8 +41,10 @@
     .default-hint {
       background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px;
       padding: 10px 14px; font-size: 12px; color: #0369a1; margin-bottom: 16px;
+      display: none;
     }
     .default-hint strong { display: block; margin-bottom: 2px; }
+    .default-hint.show { display: block; }
   </style>
 </head>
 <body>
@@ -74,6 +76,22 @@
     if (localStorage.getItem('cloudblog_session')) {
       window.location.href = '/admin/index.html';
     }
+
+    // Check if default admin password needs changing - only show hint if must_change_password is true
+    (async function checkAuthStatus() {
+      try {
+        const res = await fetch('/api/auth/status');
+        if (res.ok) {
+          const data = await res.json();
+          // Only show default hint if admin still needs to change password (fresh install not configured)
+          if (data.mustChangePassword) {
+            document.getElementById('defaultHint').classList.add('show');
+          }
+        }
+      } catch (e) {
+        // Silently fail - don't show hint if status check fails
+      }
+    })();
 
     async function doLogin() {
       const username = document.getElementById('username').value.trim();

@@ -117,6 +117,39 @@
     let currentTags = [];
     let currentMode = 'write';
     let isSaving = false;
+    let editSlug = null;
+
+    // Check if editing existing post
+    (function checkEditMode() {
+      const params = new URLSearchParams(window.location.search);
+      const slug = params.get('edit');
+      if (slug) {
+        editSlug = decodeURIComponent(slug);
+        document.title = '编辑文章 - CloudBlog';
+        document.querySelector('header span').textContent = '✏️ 编辑文章';
+        loadPostForEdit(editSlug);
+      }
+    })();
+
+    async function loadPostForEdit(slug) {
+      try {
+        const res = await fetch(`/api/posts/${encodeURIComponent(slug)}`);
+        if (res.ok) {
+          const post = await res.json();
+          document.getElementById('title').value = post.title || '';
+          document.getElementById('slug').value = post.slug || '';
+          document.getElementById('content').value = post.content || '';
+          document.getElementById('excerpt').value = post.excerpt || '';
+          document.getElementById('excerptCount').textContent = (post.excerpt || '').length;
+          currentTags = post.tags || [];
+          renderTags();
+        } else {
+          showToast('加载文章失败');
+        }
+      } catch (e) {
+        showToast('加载文章失败');
+      }
+    }
 
     function updateSlug() {
       const title = document.getElementById('title').value;
@@ -179,17 +212,30 @@
       const excerpt = document.getElementById('excerpt').value.trim() || undefined;
 
       try {
-        const res = await fetch('/api/posts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ title, slug, content, excerpt, status, tags: currentTags })
-        });
+        let res, data;
+        if (editSlug) {
+          // Update existing post
+          res = await fetch(`/api/posts/${encodeURIComponent(editSlug)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ title, slug, content, excerpt, status, tags: currentTags })
+          });
+        } else {
+          // Create new post
+          res = await fetch('/api/posts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ title, slug, content, excerpt, status, tags: currentTags })
+          });
+        }
 
         if (res.ok) {
-          const data = await res.json();
+          data = await res.json();
           showToast(status === 'published' ? '发布成功！' : '草稿已保存');
-          setTimeout(() => { window.location.href = `/posts/${data.slug}`; }, 800);
+          const redirectSlug = data.slug || editSlug;
+          setTimeout(() => { window.location.href = `/posts/${redirectSlug}`; }, 800);
         } else if (res.status === 401) {
           showToast('请先登录');
           setTimeout(() => { window.location.href = '/admin/login.html'; }, 1500);
