@@ -41,10 +41,7 @@
     .header-inner {
       width: 100%;
       max-width: 680px;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .header-centered {
-      display: flex; align-items: center; gap: 16px;
+      display: flex; align-items: center; justify-content: space-between;
     }
     .header-brand { font-size: 16px; font-weight: 700; color: var(--text); text-decoration: none; letter-spacing: -0.3px; }
     .header-nav { display: flex; align-items: center; gap: 6px; }
@@ -147,14 +144,12 @@
 
 <header>
   <div class="header-inner">
-    <div class="header-centered">
-      <a href="/" class="header-brand">CloudBlog</a>
-      <nav class="header-nav">
-        <a href="/" id="navHome">首页</a>
-        <a href="/write.html" class="btn-write" onclick="return goWrite(event)">写文章</a>
-        <a href="/admin/index.html" id="navAdmin" style="display:none">管理</a>
-      </nav>
-    </div>
+    <a href="/" class="header-brand">CloudBlog</a>
+    <nav class="header-nav">
+      <a href="/" id="navHome">首页</a>
+      <a href="/write.html" class="btn-write" onclick="return goWrite(event)">写文章</a>
+      <a href="/admin/index.html" id="navAdmin" style="display:none">管理</a>
+    </nav>
   </div>
 </header>
 
