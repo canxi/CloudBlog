@@ -45,6 +45,17 @@
     .preview-toggle { display: flex; gap: 4px; }
     .preview-toggle button { padding: 7px 12px; border-radius: 8px; border: 1px solid #d1d5db; background: white; cursor: pointer; font-size: 13px; }
     .preview-toggle button.active { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+
+    /* Mac-style code blocks */
+    .mac-code { background: #1e1e1e; border-radius: 10px; overflow: hidden; margin: 14px 0; box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
+    .mac-bar { background: #2d2d2d; padding: 10px 14px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid #3d3d3d; }
+    .mac-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+    .mac-dot.red { background: #ff5f56; }
+    .mac-dot.yellow { background: #ffbd2e; }
+    .mac-dot.green { background: #27c93f; }
+    .mac-lang { margin-left: auto; font-size: 11px; color: #888; font-family: 'SF Mono', 'Consolas', monospace; }
+    .mac-code code { display: block; padding: 14px 16px; font-family: 'SF Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace; font-size: 13px; line-height: 1.6; color: #d4d4d4; overflow-x: auto; white-space: pre; background: none; border-radius: 0; }
+    .mac-code code::before { content: none; }
     .status-row { display: flex; gap: 12px; align-items: center; }
     .status-row select { width: auto; min-width: 120px; }
   </style>
@@ -278,33 +289,45 @@
       }
     }
 
+    // Extract code blocks before HTML escaping
     function renderMarkdown(content) {
       if (!content) return '<p style="color:#999">暂无内容</p>';
-      let html = escapeHtml(content);
-      // Code blocks
-      html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
-        return `<pre><code class="language-${lang}">${code.trim()}</code></pre>`;
+
+      // Extract code blocks first (preserve them untouched)
+      const codeBlocks = [];
+      let processed = content.replace(/```(\w*)\n?([\s\S]*?)```/g, (match, lang, code) => {
+        const langLabel = lang || 'code';
+        codeBlocks.push({ lang, html: `<pre class="mac-code"><div class="mac-bar"><span class="mac-dot red"></span><span class="mac-dot yellow"></span><span class="mac-dot green"></span><span class="mac-lang">${langLabel}</span></div><code class="language-${lang}">${escapeHtml(code.trim())}</code></pre>` });
+        return `\x00CODE_BLOCK_${codeBlocks.length - 1}\x00`;
       });
-      // Inline code
-      html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+      // Now escape HTML and apply markdown
+      processed = escapeHtml(processed);
+
       // Bold
-      html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      processed = processed.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
       // Italic
-      html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+      processed = processed.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+      // Inline code
+      processed = processed.replace(/`([^`]+)`/g, '<code>$1</code>');
       // Headings
-      html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-      html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-      html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+      processed = processed.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+      processed = processed.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+      processed = processed.replace(/^# (.+)$/gm, '<h1>$1</h1>');
       // Blockquote
-      html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+      processed = processed.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
       // Lists
-      html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-      html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+      processed = processed.replace(/^- (.+)$/gm, '<li>$1</li>');
+      processed = processed.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
       // Paragraphs (double newline)
-      html = html.replace(/\n\n+/g, '</p><p>');
-      // Single newlines in paragraphs
-      html = html.replace(/\n/g, '<br>');
-      return `<p>${html}</p>`;
+      processed = processed.replace(/\n\n+/g, '</p><p>');
+      // Single newlines in paragraphs (not inside tags)
+      processed = processed.replace(/\n/g, '<br>');
+
+      // Restore code blocks
+      processed = processed.replace(/\x00CODE_BLOCK_(\d+)\x00/g, (match, index) => codeBlocks[index].html);
+
+      return `<p>${processed}</p>`;
     }
 
     function escapeHtml(str) {
