@@ -59,7 +59,21 @@
     .btn-write:hover { opacity: 0.85 !important; }
 
     /* ── Main ── */
-    main { max-width: 680px; margin: 0 auto; padding: 32px 20px 80px; }
+    main { max-width: 680px; margin: 0 auto; padding: 24px 16px 60px; }
+
+    @media (max-width: 480px) {
+      header { padding: 0 12px; }
+      .header-inner { max-width: 100%; }
+      .header-nav a { padding: 5px 10px; font-size: 12px; }
+      .btn-write { padding: 5px 10px !important; font-size: 12px !important; }
+      main { padding: 16px 12px 50px; }
+      .post-title { font-size: 15px; }
+      .post-meta { font-size: 11px; }
+      .post-excerpt { font-size: 13px; -webkit-line-clamp: 2; }
+      .skeleton-item { padding: 18px 0; }
+      footer { padding: 16px 12px; }
+      .footer-inner { font-size: 11px; }
+    }
 
     /* ── Post List ── */
     .posts-list { display: flex; flex-direction: column; }

@@ -88,6 +88,24 @@
     .modal-error.show { display: block; }
     .change-pw-btn { padding: 7px 16px; background: white; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; }
     .change-pw-btn:hover { background: #f8fafc; }
+
+    @media (max-width: 640px) {
+      main { padding: 16px 12px; }
+      .page-title { font-size: 18px; margin-bottom: 16px; }
+      .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .stat-card { padding: 14px; }
+      .stat-card .value { font-size: 22px; }
+      .section { border-radius: 8px; }
+      .section-header { padding: 12px 14px; }
+      .tab-bar { padding: 0 14px; }
+      .tab { padding: 10px 12px; font-size: 12px; }
+      .comment-item { padding: 12px 14px; }
+      .post-item { padding: 12px 14px; }
+      .post-actions { gap: 4px; }
+      .action-btn { padding: 4px 8px; font-size: 11px; }
+      header { padding: 0 12px; }
+      header h1 { font-size: 14px; }
+    }
   </style>
 </head>
 <body>
