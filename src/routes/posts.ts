@@ -71,6 +71,41 @@ async function handleList(request: Request, env: Env): Promise<Response> {
   return jsonResponse({ posts, page, limit });
 }
 
+// GET /api/admin/posts - List all posts including drafts (admin only)
+async function handleAdminList(request: Request, env: Env): Promise<Response> {
+  const user = await adminAuth(request, env);
+  if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+
+  const result = await env.DB
+    .prepare(`
+      SELECT p.id, p.title, p.slug, p.excerpt, p.cover_image, p.status,
+             p.published_at, p.created_at, p.updated_at,
+             u.display_name as author_name, u.avatar_url as author_avatar
+      FROM posts p
+      LEFT JOIN users u ON p.author_id = u.id
+      ORDER BY p.created_at DESC
+    `)
+    .all();
+
+  const posts = (result.results as Record<string, unknown>[]).map(row => ({
+    id: String(row.id),
+    title: String(row.title),
+    slug: String(row.slug),
+    excerpt: row.excerpt ? String(row.excerpt) : '',
+    coverImage: row.cover_image ? String(row.cover_image) : '',
+    status: String(row.status),
+    publishedAt: row.published_at ? Number(row.published_at) : null,
+    createdAt: Number(row.created_at),
+    updatedAt: Number(row.updated_at),
+    author: {
+      name: row.author_name ? String(row.author_name) : 'Unknown',
+      avatar: row.author_avatar ? String(row.author_avatar) : '',
+    },
+  }));
+
+  return jsonResponse({ posts });
+}
+
 // GET /api/posts/:slug - Get single post by slug
 async function handleGetBySlug(request: Request, env: Env, slug: string): Promise<Response> {
   // Check if user is authenticated admin - allow fetching drafts for editing
@@ -290,7 +325,7 @@ export async function handlePostsRequest(request: Request, env: Env): Promise<Re
   const pathname = url.pathname.replace('/api/posts', '');
   const method = request.method;
 
-  // GET /api/posts - list
+  // GET /api/posts - list published posts
   if (method === 'GET' && (pathname === '/' || pathname === '')) {
     return handleList(request, env);
   }
@@ -314,6 +349,20 @@ export async function handlePostsRequest(request: Request, env: Env): Promise<Re
   // DELETE /api/posts/:slug - delete
   if (method === 'DELETE' && getMatch) {
     return handleDelete(request, env, getMatch[1]);
+  }
+
+  return jsonResponse({ error: 'Not found' }, 404);
+}
+
+// Separate handler for admin post routes (includes drafts)
+export async function handleAdminPostsRequest(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const pathname = url.pathname.replace('/api/admin/posts', '');
+  const method = request.method;
+
+  // GET /api/admin/posts - list all posts including drafts
+  if (method === 'GET' && (pathname === '/' || pathname === '')) {
+    return handleAdminList(request, env);
   }
 
   return jsonResponse({ error: 'Not found' }, 404);

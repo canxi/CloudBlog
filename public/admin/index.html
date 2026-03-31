@@ -420,7 +420,7 @@
     container.innerHTML = '';
 
     try {
-      const res = await fetch('/api/posts');
+      const res = await apiFetch('/api/admin/posts');
       const data = await res.json();
       const posts = data.posts || [];
       loading.style.display = 'none';
@@ -434,7 +434,7 @@
         <div class="post-item">
           <div class="post-info">
             <div class="post-title">${escapeHtml(p.title)}</div>
-            <div class="post-meta">${p.status} · ${formatTime(p.createdAt)} · ${p.author?.name || 'Unknown'}</div>
+            <div class="post-meta">${p.status === 'draft' ? '草稿' : '已发布'} · ${formatTime(p.createdAt)} · ${p.author?.name || 'Unknown'}</div>
           </div>
           <div class="post-actions">
             <a href="/posts/${p.slug}" class="action-btn" style="background:#eff6ff;color:#1e40af" target="_blank">查看</a>

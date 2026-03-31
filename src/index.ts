@@ -7,7 +7,7 @@ import { handleMigrationRequest } from './routes/migration';
 import { handleSearchRequest } from './routes/search';
 import { handleMediaRequest } from './routes/media';
 import { handleCommentsRequest } from './routes/comments';
-import { handlePostsRequest } from './routes/posts';
+import { handlePostsRequest, handleAdminPostsRequest } from './routes/posts';
 import { handleAuthRequest } from './routes/auth';
 import { handleCORS, checkRateLimit, getCorsHeaders } from './utils/security';
 
@@ -70,6 +70,9 @@ export default {
 		}
 		if (url.pathname.startsWith('/api/search')) {
 			return await handleSearchRequest(request, env);
+		}
+		if (url.pathname.startsWith('/api/admin/posts')) {
+			return await handleAdminPostsRequest(request, env);
 		}
 		if (url.pathname.startsWith('/api/posts')) {
 			return await handlePostsRequest(request, env);
