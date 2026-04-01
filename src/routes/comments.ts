@@ -7,6 +7,7 @@ import { getSessionUser } from '../middleware/auth';
 const SPAM_KEYWORDS = [
   'buy now', 'click here', 'free money', 'casino', 'viagra',
   'cryptocurrency', 'forex', 'investment opportunity', 'lottery',
+  '如果你对', '欢迎在评论区交流', '更多想法或疑问',
 ];
 
 interface Comment {

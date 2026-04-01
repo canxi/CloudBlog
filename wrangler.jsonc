@@ -24,6 +24,11 @@
 	"observability": {
 		"enabled": true
 	},
+	// Site logo and footer - managed here in wrangler.jsonc (not Cloudflare Console vars)
+	"vars": {
+		"SITE_LOGO_TEXT": "FLPT",
+		"SITE_FOOTER_TEXT": "© 2024 CloudBlog. All rights reserved."
+	},
 	"upload_source_maps": true,
 	"d1_databases": [
 		{

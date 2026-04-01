@@ -7,7 +7,6 @@ import { handleMigrationRequest } from './routes/migration';
 import { handleSearchRequest } from './routes/search';
 import { handleMediaRequest } from './routes/media';
 import { handleUploadImageRequest } from './routes/upload';
-import { handleConfigRequest } from './routes/config';
 import { handleCommentsRequest } from './routes/comments';
 import { handlePostsRequest, handleAdminPostsRequest } from './routes/posts';
 import { handleAdminMigrateRequest } from './routes/admin-migrate';
@@ -162,10 +161,6 @@ export default {
 		if (url.pathname === '/api/upload/image') {
 			return await handleUploadImageRequest(request, env);
 		}
-		if (url.pathname === '/api/config') {
-			return await handleConfigRequest(request, env);
-		}
-
 		// Debug: check env vars
 		if (url.pathname === '/api/debug/env') {
 			return new Response(JSON.stringify({
@@ -225,11 +220,12 @@ export default {
 		// Admin routes
 		if (url.pathname.startsWith('/admin')) {
 			let page = '/admin/index.html';
-			if (url.pathname === '/admin/login' || url.pathname === '/admin') {
+			if (
+				url.pathname === '/admin/login' ||
+				url.pathname === '/admin/login.html' ||
+				url.pathname === '/admin'
+			) {
 				page = '/admin/login.html';
-			} else if (url.pathname === '/admin/settings') {
-				page = '/admin/settings.html';
-			}
 			return serveStaticFile(page, env, request);
 		}
 
