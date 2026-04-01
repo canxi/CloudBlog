@@ -15,17 +15,16 @@
 		{
 			"binding": "STATIC_BUCKET",
 			"bucket_name": "cloudblog-images"
+		},
+		{
+			"binding": "IMAGES_BUCKET",
+			"bucket_name": "cloudblog-images"
 		}
 	],
-	"vars": {
-		"SITE_LOGO_TEXT": "CloudBlog",
-		"SITE_FOOTER_TEXT": "© 2024 CloudBlog. All rights reserved."
-	},
 	"observability": {
 		"enabled": true
 	},
 	"upload_source_maps": true,
-	// D1 Database binding
 	"d1_databases": [
 		{
 			"binding": "DB",
@@ -33,14 +32,6 @@
 			"database_id": "4cc7dce4-1285-41a0-80ba-319759c59456"
 		}
 	],
-	// R2 bucket for image storage
-	"r2_buckets": [
-		{
-			"binding": "IMAGES_BUCKET",
-			"bucket_name": "cloudblog-images"
-		}
-	],
-	// KV namespaces
 	"kv_namespaces": [
 		{
 			"binding": "IMPORT_KV",

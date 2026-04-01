@@ -299,21 +299,6 @@
   let currentSlug = null;
 
   async function loadPost() {
-    // Load site config first
-    try {
-      const configRes = await fetch('/api/config');
-      if (configRes.ok) {
-        const resp = await configRes.json();
-        const config = resp.data || {};
-        const brand = document.querySelector('.header-brand');
-        if (brand && config.site_logo_text) {
-          brand.textContent = config.site_logo_text;
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to load site config:', e);
-    }
-
     const slug = getSlugFromPath();
     if (!slug) {
       showError();

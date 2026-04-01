@@ -359,27 +359,6 @@
 
   // ── Init ──
   async function init() {
-    // Load site config first
-    try {
-      const configRes = await fetch('/api/config');
-      if (configRes.ok) {
-        const resp = await configRes.json();
-        const config = resp.data || {};
-        // Update header brand
-        const brand = document.querySelector('.header-brand');
-        if (brand && config.site_logo_text) {
-          brand.textContent = config.site_logo_text;
-        }
-        // Update footer text
-        const footerSpans = document.querySelectorAll('footer .footer-inner > span');
-        if (footerSpans.length > 0 && config.footer_text) {
-          footerSpans[0].textContent = config.footer_text;
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to load site config:', e);
-    }
-
     // Show admin link if logged in
     if (localStorage.getItem('cloudblog_session')) {
       document.getElementById('navAdmin').style.display = '';

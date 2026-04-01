@@ -207,45 +207,19 @@ export default {
 			return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers });
 		}
 
-		// For static assets (JS, CSS, images), fetch from self
-		if (isStaticAsset(url.pathname)) {
-			const assetUrl = `https://${url.hostname}${url.pathname}`;
-			try {
-				const assetRes = await fetch(assetUrl, request);
-				if (assetRes.ok) {
-					const headers = new Headers(assetRes.headers);
-					addSecurityHeaders(headers);
-					headers.set('Cache-Control', 'public, max-age=31536000, immutable');
-					return new Response(assetRes.body, { status: assetRes.status, headers });
-				}
-			} catch {
-				// fall through to 404
-			}
+		// Serve static files from R2 — no more self-referential fetch loops
+		if (url.pathname === '/' || url.pathname === '' || url.pathname === '/index.html') {
+			return serveStaticFile('/index.html', env, request);
 		}
 
-		// Serve /write.html for /write route (post editor)
 		if (url.pathname === '/write' || url.pathname === '/write.html') {
-			const writeRes = await fetch(`https://${url.hostname}/write.html`);
-			if (writeRes.ok) {
-				const body = await writeRes.text();
-				const headers = new Headers({ 'Content-Type': 'text/html; charset=utf-8' });
-				addSecurityHeaders(headers);
-				headers.set('Cache-Control', 'no-cache');
-				return new Response(body, { status: 200, headers });
-			}
+			return serveStaticFile('/write.html', env, request);
 		}
 
 		// Serve post.html for /posts/:num routes (article detail page by sequential number)
 		const postsMatch = url.pathname.match(/^\/posts\/(\d+)$/);
 		if (postsMatch) {
-			const postRes = await fetch(`https://${url.hostname}/post.html`);
-			if (postRes.ok) {
-				const body = await postRes.text();
-				const headers = new Headers({ 'Content-Type': 'text/html; charset=utf-8' });
-				addSecurityHeaders(headers);
-				headers.set('Cache-Control', 'no-cache');
-				return new Response(body, { status: 200, headers });
-			}
+			return serveStaticFile('/post.html', env, request);
 		}
 
 		// Admin routes
@@ -256,25 +230,17 @@ export default {
 			} else if (url.pathname === '/admin/settings') {
 				page = '/admin/settings.html';
 			}
-			const adminRes = await fetch(`https://${url.hostname}${page}`);
-			if (adminRes.ok) {
-				const body = await adminRes.text();
-				const headers = new Headers({ 'Content-Type': 'text/html; charset=utf-8' });
-				addSecurityHeaders(headers);
-				headers.set('Cache-Control', 'no-cache');
-				return new Response(body, { status: 200, headers });
-			}
+			return serveStaticFile(page, env, request);
 		}
 
-		// SPA fallback: serve index.html for root and unmatched routes
-		const indexRes = await fetch(`https://${url.hostname}/index.html`);
-		if (indexRes.ok) {
-			const body = await indexRes.text();
-			const headers = new Headers({ 'Content-Type': 'text/html; charset=utf-8' });
-			addSecurityHeaders(headers);
-			headers.set('Cache-Control', 'no-cache');
-			return new Response(body, { status: 200, headers });
+		// For other static assets (JS, CSS, images, etc.)
+		if (isStaticAsset(url.pathname)) {
+			return serveStaticFile(url.pathname, env, request);
 		}
+
+		// SPA fallback: serve index.html
+		const indexRes = await serveStaticFile('/index.html', env, request);
+		if (indexRes.ok) return indexRes;
 
 		return new Response('Not Found', { status: 404 });
 	},
