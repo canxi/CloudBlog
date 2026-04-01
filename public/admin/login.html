@@ -72,24 +72,24 @@
   </div>
 
   <script>
-    // If already logged in, redirect to dashboard
-    if (localStorage.getItem('cloudblog_session')) {
-      window.location.href = '/admin/index.html';
-    }
-
     // Check if default admin password needs changing - only show hint if must_change_password is true
     (async function checkAuthStatus() {
       try {
         const res = await fetch('/api/auth/status');
         if (res.ok) {
           const data = await res.json();
+          // If logged in with valid session, redirect to dashboard
+          if (data.loggedIn) {
+            window.location.href = '/admin/index.html';
+            return;
+          }
           // Only show default hint if admin still needs to change password (fresh install not configured)
           if (data.mustChangePassword) {
             document.getElementById('defaultHint').classList.add('show');
           }
         }
       } catch (e) {
-        // Silently fail - don't show hint if status check fails
+        // Silently fail - show login form
       }
     })();
 

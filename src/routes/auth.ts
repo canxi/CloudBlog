@@ -132,6 +132,9 @@ async function handleMe(request: Request, env: Env): Promise<Response> {
 
 // GET /api/auth/status - Get auth status (public, no auth required)
 async function handleStatus(request: Request, env: Env): Promise<Response> {
+  // Check if user has valid server-side session
+  const user = await getSessionUser(request, env.DB);
+
   // Check if admin password has been changed (admin exists and must_change_password = 0)
   const admin = await env.DB
     .prepare(`SELECT id, must_change_password FROM users WHERE username = 'admin' LIMIT 1`)
@@ -139,12 +142,13 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
 
   if (!admin) {
     // No admin user exists yet - fresh install
-    return jsonResponse({ needsSetup: true, mustChangePassword: false });
+    return jsonResponse({ needsSetup: true, mustChangePassword: false, loggedIn: false });
   }
 
   return jsonResponse({
     needsSetup: false,
-    mustChangePassword: !!admin.must_change_password
+    mustChangePassword: !!admin.must_change_password,
+    loggedIn: !!user
   });
 }
 
