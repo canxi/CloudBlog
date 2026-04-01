@@ -14,23 +14,23 @@ upload_source_maps = true
 
 # =============================================
 # 生产环境配置 (使用 --env production)
-# ID 通过 GitHub Actions Variables 注入，或直接修改下方实际值
+# 资源 ID 通过 wrangler --var 传入，或在 GitHub Actions 中直接 sed 替换
 # =============================================
 [env.production]
 
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "cloudblog-db"
-database_id = "{{D1_DATABASE_ID}}"  # 来自 GitHub Actions Variables
+database_id = "${D1_DATABASE_ID}"
 
 [[env.production.r2_buckets]]
 binding = "IMAGES_BUCKET"
-bucket_name = "cloudblog-images"
+bucket_name = "${R2_BUCKET_NAME}"
 
 [[env.production.kv_namespaces]]
 binding = "IMPORT_KV"
-id = "{{KV_IMPORT_ID}}"  # 来自 GitHub Actions Variables
+id = "${IMPORT_KV_ID}"
 
 [[env.production.kv_namespaces]]
 binding = "SEARCH_KV"
-id = "{{KV_SEARCH_ID}}"  # 来自 GitHub Actions Variables
+id = "${SEARCH_KV_ID}"

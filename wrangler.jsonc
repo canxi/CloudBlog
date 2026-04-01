@@ -11,8 +11,15 @@
 		"nodejs_compat",
 		"global_fetch_strictly_public"
 	],
-	"assets": {
-		"directory": "./public"
+	"r2_buckets": [
+		{
+			"binding": "STATIC_BUCKET",
+			"bucket_name": "cloudblog-images"
+		}
+	],
+	"vars": {
+		"SITE_LOGO_TEXT": "CloudBlog",
+		"SITE_FOOTER_TEXT": "© 2024 CloudBlog. All rights reserved."
 	},
 	"observability": {
 		"enabled": true

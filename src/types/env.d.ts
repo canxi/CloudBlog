@@ -18,4 +18,11 @@ interface Env {
 
 	// CDN custom domain (e.g., cdn.yourdomain.com)
 	CDN_DOMAIN?: string;
+
+	// R2 bucket for static assets
+	STATIC_BUCKET: R2Bucket;
+
+	// Site config vars (plain text, set in wrangler.jsonc)
+	SITE_LOGO_TEXT: string;
+	SITE_FOOTER_TEXT: string;
 }
