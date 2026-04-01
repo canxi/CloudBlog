@@ -19,6 +19,8 @@
     .header-right { display: flex; align-items: center; gap: 8px; }
     .user-info { font-size: 13px; color: var(--text-sec); padding-right: 8px; border-right: 1px solid var(--border); margin-right: 4px; }
     .logout-btn { padding: 7px 16px; background: #f1f5f9; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; }
+    .back-blog-btn { padding: 7px 16px; background: #111; color: white !important; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; transition: opacity 0.15s; }
+    .back-blog-btn:hover { opacity: 0.85; }
 
     main { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
 
@@ -111,12 +113,12 @@
 <body>
 <header>
   <div class="header-left">
-    <h1>CloudBlog 管理后台</h1>
-    <a href="/">← 返回博客</a>
+    <h1>管理后台</h1>
+    <a href="/" class="back-blog-btn">← 返回博客</a>
+    <a href="/admin/settings">站点设置</a>
   </div>
   <div class="header-right">
     <span class="user-info" id="userInfo">加载中...</span>
-    <button class="change-pw-btn" onclick="openPasswordModal()">修改密码</button>
     <button class="logout-btn" onclick="logout()">退出</button>
   </div>
 </header>
@@ -451,12 +453,12 @@
       container.innerHTML = posts.map(p => `
         <div class="post-item">
           <div class="post-info">
-            <div class="post-title">${escapeHtml(p.title)}</div>
+            <div class="post-title">${escapeHtml(p.title)} <span style="font-size:11px;color:#9ca3af;font-weight:normal;">#${p.post_num || '?'}</span></div>
             <div class="post-meta">${p.status === 'draft' ? '草稿' : '已发布'} · ${formatTime(p.createdAt)} · ${p.author?.name || 'Unknown'}</div>
           </div>
           <div class="post-actions">
-            <a href="/posts/${p.slug}" class="action-btn" style="background:#eff6ff;color:#1e40af" target="_blank">查看</a>
-            <a href="/write.html?edit=${encodeURIComponent(p.slug)}" class="action-btn" style="background:#f0fdf4;color:#166534">编辑</a>
+            <a href="/posts/${p.post_num}" class="action-btn" style="background:#eff6ff;color:#1e40af" target="_blank">查看</a>
+            <a href="/write.html?editNum=${p.post_num}" class="action-btn" style="background:#f0fdf4;color:#166534">编辑</a>
             <button class="action-btn delete-btn" onclick="deletePost('${escapeHtml(p.slug)}')">删除</button>
           </div>
         </div>

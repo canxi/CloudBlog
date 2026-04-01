@@ -23,6 +23,88 @@
 - **样式**: 原生 CSS（响应式设计）
 - **Markdown**: marked.js
 
+## 🚀 一键部署（GitHub Actions）
+
+通过 GitHub Actions 实现代码推送后自动部署到 Cloudflare Workers。
+
+### 步骤 1：在 Cloudflare 创建资源
+
+1. **D1 数据库**：Cloudflare Dashboard → Workers & Pages → D1 → 创建数据库，命名为 `cloudblog-db`
+2. **KV 命名空间**：Workers & Pages → KV → 创建两个命名空间，分别命名为 `IMPORT_KV` 和 `SEARCH_KV`
+3. **R2 存储桶**：R2 → 创建存储桶，命名为 `cloudblog-images`（设为公开访问）
+
+### 步骤 2：获取 Cloudflare API Token
+
+1. 进入 [Cloudflare API Tokens 页面](https://dash.cloudflare.com/profile/api-tokens)
+2. 点击「创建 Token」→「创建自定义 Token」
+3. 权限配置：
+   - `Account: Edit`（读取 account ID、部署 workers）
+   - `User: Edit`（无效，可跳过）
+   - `Workers: Edit`（部署 workers）
+   - `D1: Edit`（执行 D1 数据库操作）
+   - `KV: Edit`（读写 KV）
+   - `R2: Edit`（读写 R2 存储桶）
+4. 复制生成的 API Token，妥善保存
+
+### 步骤 3：获取 Cloudflare ACCOUNT_ID
+
+在 Cloudflare Dashboard 右上角头像下拉 → 概览页面，复制「账户 ID」。
+
+### 步骤 4：配置 GitHub Secrets
+
+进入 GitHub 仓库 → Settings → Secrets and variables → Actions，添加以下 Secrets：
+
+| Secret 名称 | 说明 |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | 步骤 2 创建的 API Token |
+| `CLOUDFLARE_ACCOUNT_ID` | 步骤 3 获取的账户 ID |
+
+### 步骤 5：配置 GitHub Actions Variables
+
+进入 GitHub 仓库 → Settings → Secrets and variables → Variables → Actions，添加以下 Variables：
+
+| Variable 名称 | 值 |
+|---|---|
+| `D1_DATABASE_ID` | 步骤 1 创建的 D1 数据库 ID（在 D1 数据库详情页复制） |
+| `KV_IMPORT_ID` | 步骤 1 创建的 IMPORT_KV 命名空间 ID |
+| `KV_SEARCH_ID` | 步骤 1 创建的 SEARCH_KV 命名空间 ID |
+
+### 步骤 6：Fork 并推送代码
+
+```bash
+git clone https://github.com/canxi/CloudBlog.git
+cd CloudBlog
+git push origin master   # 推送到自己的仓库触发 Actions
+```
+
+Actions 会自动执行：
+1. 安装依赖
+2. 注入资源 ID 到 `wrangler.toml`
+3. 在远程 D1 执行 `schema.sql` 建表
+4. 部署 Worker
+
+### 步骤 7：初始化管理员账号
+
+部署完成后，访问以下地址创建管理员账号：
+
+```
+https://<your-worker-subdomain>.workers.dev/api/init?token=<INIT_TOKEN>&username=<USERNAME>&password=<PASSWORD>
+```
+
+参数说明：
+- `<your-worker-subdomain>`：Worker 部署后分配的子域名，可在 Cloudflare Dashboard 查看
+- `<INIT_TOKEN>`：首次部署时自动生成的初始化 Token（查看 GitHub Actions 日志中的输出）
+- `<USERNAME>`：管理员用户名
+- `<PASSWORD>`：管理员密码
+
+### 步骤 8：访问管理后台
+
+管理后台地址：`https://<your-worker-subdomain>.workers.dev/admin/`
+
+初始登录后系统会强制要求修改默认密码。
+
+---
+
 ## 项目结构
 
 ```
@@ -162,7 +244,50 @@ wrangler d1 execute cloudblog-db --local --file=./src/db/schema.sql
 
 ## 部署到生产环境
 
-### 方式一：Wrangler CLI 部署
+### 方式一：GitHub Actions 一键部署（推荐）
+
+推送代码到 `main` 分支即自动部署，全程无需手动操作。
+
+**配置步骤：**
+
+1. 在 GitHub 仓库 Settings → Secrets and variables → Actions 中添加以下 Secrets：
+
+| Secret 名称 | 说明 | 获取方式 |
+|-------------|------|----------|
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Account ID | Cloudflare Dashboard → 右上角头像 → 我的个人资料 → 复制账户 ID |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API Token | Cloudflare Dashboard → API Tokens → 创建自定义 Token（需 Worker、D1、KV、R2 权限）|
+
+2. 在 Cloudflare Dashboard 中提前创建好以下资源（首次手动，之后 CI 自动复用）：
+   - D1 数据库：`cloudblog-db`
+   - KV 命名空间：`IMPORT_KV`、`SEARCH_KV`
+   - R2 存储桶：`cloudblog-images`
+
+3. 在 GitHub 仓库 Settings → Variables → Actions 中添加以下 Variables：
+
+| Variable 名称 | 值 |
+|---------------|-----|
+| `D1_DATABASE_ID` | 你的 D1 数据库 ID（如 `4cc7dce4-1285-41a0-80ba-319759c59456`） |
+| `R2_BUCKET_NAME` | `cloudblog-images` |
+| `KV_IMPORT_ID` | IMPORT_KV 命名空间 ID |
+| `KV_SEARCH_ID` | SEARCH_KV 命名空间 ID |
+
+4. 推送代码到 `main` 分支，或在 GitHub Actions 页面手动触发 `Deploy CloudBlog` workflow。
+
+> **提示**：首次部署前，需先在本地执行一次数据库初始化：
+> ```bash
+> ./scripts/init-d1.sh remote production
+> ```
+> 之后 GitHub Actions 中的 `init-db` job 会自动维护表结构。
+
+**CI/CD 流程说明：**
+
+- `init-db` job：自动执行 `schema.sql` 创建/更新数据库表结构
+- `deploy` job：自动部署 Worker 到 Cloudflare
+- `full-deploy` job：串行执行，确保数据库就绪后再部署
+
+---
+
+### 方式二：Wrangler CLI 部署
 
 ```bash
 # 设置 Cloudflare API Token

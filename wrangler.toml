@@ -1,0 +1,36 @@
+# CloudBlog Wrangler 配置
+# wrangler.toml - 用于 CI/CD 和生产部署
+# 本地开发请使用 wrangler.jsonc（包含本地开发专用 ID）
+
+name = "cloudblog"
+main = "src/index.ts"
+compatibility_date = "2026-03-10"
+compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
+
+assets = { directory = "./public" }
+
+observability = { enabled = true }
+upload_source_maps = true
+
+# =============================================
+# 生产环境配置 (使用 --env production)
+# ID 通过 GitHub Actions Variables 注入，或直接修改下方实际值
+# =============================================
+[env.production]
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "cloudblog-db"
+database_id = "{{D1_DATABASE_ID}}"  # 来自 GitHub Actions Variables
+
+[[env.production.r2_buckets]]
+binding = "IMAGES_BUCKET"
+bucket_name = "cloudblog-images"
+
+[[env.production.kv_namespaces]]
+binding = "IMPORT_KV"
+id = "{{KV_IMPORT_ID}}"  # 来自 GitHub Actions Variables
+
+[[env.production.kv_namespaces]]
+binding = "SEARCH_KV"
+id = "{{KV_SEARCH_ID}}"  # 来自 GitHub Actions Variables

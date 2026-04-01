@@ -23,7 +23,7 @@ async function handleList(request: Request, env: Env): Promise<Response> {
   const tag = url.searchParams.get('tag') || undefined;
 
   let query = `
-    SELECT p.id, p.title, p.slug, p.excerpt, p.cover_image, p.status, 
+    SELECT p.id, p.post_num, p.title, p.slug, p.excerpt, p.cover_image, p.status, 
            p.published_at, p.created_at, p.updated_at,
            u.display_name as author_name, u.avatar_url as author_avatar
     FROM posts p
@@ -54,6 +54,7 @@ async function handleList(request: Request, env: Env): Promise<Response> {
   const result = await env.DB.prepare(query).bind(...bindings).all();
   const posts = (result.results as Record<string, unknown>[]).map(row => ({
     id: String(row.id),
+    post_num: row.post_num ? Number(row.post_num) : null,
     title: String(row.title),
     slug: String(row.slug),
     excerpt: row.excerpt ? String(row.excerpt) : '',
@@ -78,7 +79,7 @@ async function handleAdminList(request: Request, env: Env): Promise<Response> {
 
   const result = await env.DB
     .prepare(`
-      SELECT p.id, p.title, p.slug, p.excerpt, p.cover_image, p.status,
+      SELECT p.id, p.post_num, p.title, p.slug, p.excerpt, p.cover_image, p.status,
              p.published_at, p.created_at, p.updated_at,
              u.display_name as author_name, u.avatar_url as author_avatar
       FROM posts p
@@ -97,6 +98,7 @@ async function handleAdminList(request: Request, env: Env): Promise<Response> {
 
     return {
       id: String(row.id),
+      post_num: row.post_num ? Number(row.post_num) : null,
       title: String(row.title),
       slug: String(row.slug),
       excerpt: row.excerpt ? String(row.excerpt) : '',
@@ -116,21 +118,43 @@ async function handleAdminList(request: Request, env: Env): Promise<Response> {
   return jsonResponse({ posts });
 }
 
-// GET /api/posts/:slug - Get single post by slug
+// GET /api/posts/:slug - Get single post by slug or by post_num
 async function handleGetBySlug(request: Request, env: Env, slug: string): Promise<Response> {
+  // Decode URL-encoded slug (handle double-encoding: %25E6 -> %E6 -> 测试)
+  let decodedSlug = slug;
+  for (let i = 0; i < 5; i++) {
+    const next = decodeURIComponent(decodedSlug);
+    if (next === decodedSlug) break;
+    decodedSlug = next;
+  }
   // Check if user is authenticated admin - allow fetching drafts for editing
   const user = await getSessionUser(request, env.DB);
   const isAdmin = user && user.role === 'admin';
 
-  const result = await env.DB
-    .prepare(`
-      SELECT p.*, u.display_name as author_name, u.avatar_url as author_avatar
-      FROM posts p
-      LEFT JOIN users u ON p.author_id = u.id
-      WHERE p.slug = ? ${isAdmin ? '' : "AND p.status = 'published'"}
-    `)
-    .bind(slug)
-    .first();
+  // If slug looks like a number, try looking up by post_num first
+  const num = parseInt(decodedSlug);
+  let result;
+  if (!isNaN(num) && String(num) === decodedSlug) {
+    result = await env.DB
+      .prepare(`
+        SELECT p.*, u.display_name as author_name, u.avatar_url as author_avatar
+        FROM posts p
+        LEFT JOIN users u ON p.author_id = u.id
+        WHERE p.post_num = ? ${isAdmin ? '' : "AND p.status = 'published'"}
+      `)
+      .bind(num)
+      .first();
+  } else {
+    result = await env.DB
+      .prepare(`
+        SELECT p.*, u.display_name as author_name, u.avatar_url as author_avatar
+        FROM posts p
+        LEFT JOIN users u ON p.author_id = u.id
+        WHERE p.slug = ? ${isAdmin ? '' : "AND p.status = 'published'"}
+      `)
+      .bind(decodedSlug)
+      .first();
+  }
 
   if (!result) {
     return jsonResponse({ error: 'Post not found' }, 404);
@@ -162,6 +186,7 @@ async function handleGetBySlug(request: Request, env: Env, slug: string): Promis
 
   return jsonResponse({
     id: String(row.id),
+    post_num: row.post_num ? Number(row.post_num) : null,
     title: String(row.title),
     slug: String(row.slug),
     content: String(row.content),
@@ -214,19 +239,23 @@ async function handleCreate(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ error: 'title and content are required' }, 400);
   }
 
-  const postSlug = slug
-    ? slug.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/(^-|-$)/g, '').slice(0, 100)
-    : title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 100);
   const postId = crypto.randomUUID();
   const now = Math.floor(Date.now() / 1000);
   const publishedAt = status === 'published' ? now : null;
 
+  // Get next post_num
+  const maxResult = await env.DB.prepare(`SELECT MAX(post_num) as max_num FROM posts`).first() as { max_num: number | null };
+  const nextNum = (maxResult?.max_num ?? 0) + 1;
+
+  // If slug is empty, use post_num as slug
+  const postSlug = slug ? slug.slice(0, 100) : String(nextNum);
+
   await env.DB
     .prepare(`
-      INSERT INTO posts (id, title, slug, content, excerpt, cover_image, author_id, status, published_at, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO posts (id, post_num, title, slug, content, excerpt, cover_image, author_id, status, published_at, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
-    .bind(postId, title, postSlug, content, excerpt || '', coverImage || '', authorId, status, publishedAt, now, now)
+    .bind(postId, nextNum, title, postSlug, content, excerpt || '', coverImage || '', authorId, status, publishedAt, now, now)
     .run();
 
   // Handle category
@@ -265,7 +294,21 @@ async function handleUpdate(request: Request, env: Env, slug: string): Promise<R
   const user = await adminAuth(request, env);
   if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
 
-  const existing = await env.DB.prepare(`SELECT id FROM posts WHERE slug = ?`).bind(slug).first();
+  let decodedSlug = slug;
+  for (let i = 0; i < 5; i++) {
+    const next = decodeURIComponent(decodedSlug);
+    if (next === decodedSlug) break;
+    decodedSlug = next;
+  }
+
+  // If slug looks like a number, look up by post_num
+  const num = parseInt(decodedSlug);
+  let existing;
+  if (!isNaN(num) && String(num) === decodedSlug) {
+    existing = await env.DB.prepare(`SELECT id FROM posts WHERE post_num = ?`).bind(num).first();
+  } else {
+    existing = await env.DB.prepare(`SELECT id FROM posts WHERE slug = ?`).bind(decodedSlug).first();
+  }
   if (!existing) {
     return jsonResponse({ error: 'Post not found' }, 404);
   }
@@ -273,6 +316,7 @@ async function handleUpdate(request: Request, env: Env, slug: string): Promise<R
 
   let body: {
     title?: string;
+    slug?: string;
     content?: string;
     excerpt?: string;
     coverImage?: string;
@@ -291,6 +335,7 @@ async function handleUpdate(request: Request, env: Env, slug: string): Promise<R
   const bindings: (string | number | null)[] = [];
 
   if (body.title) { updates.push('title = ?'); bindings.push(body.title); }
+  if (body.slug) { updates.push('slug = ?'); bindings.push(body.slug.slice(0, 100)); }
   if (body.content) { updates.push('content = ?'); bindings.push(body.content); }
   if (body.excerpt !== undefined) { updates.push('excerpt = ?'); bindings.push(body.excerpt || ''); }
   if (body.coverImage !== undefined) { updates.push('cover_image = ?'); bindings.push(body.coverImage || ''); }
@@ -320,12 +365,27 @@ async function handleDelete(request: Request, env: Env, slug: string): Promise<R
   const user = await adminAuth(request, env);
   if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
 
-  const existing = await env.DB.prepare(`SELECT id FROM posts WHERE slug = ?`).bind(slug).first();
+  let decodedSlug = slug;
+  for (let i = 0; i < 5; i++) {
+    const next = decodeURIComponent(decodedSlug);
+    if (next === decodedSlug) break;
+    decodedSlug = next;
+  }
+
+  // If slug looks like a number, look up by post_num
+  const num = parseInt(decodedSlug);
+  let existing;
+  if (!isNaN(num) && String(num) === decodedSlug) {
+    existing = await env.DB.prepare(`SELECT id FROM posts WHERE post_num = ?`).bind(num).first();
+  } else {
+    existing = await env.DB.prepare(`SELECT id FROM posts WHERE slug = ?`).bind(decodedSlug).first();
+  }
   if (!existing) {
     return jsonResponse({ error: 'Post not found' }, 404);
   }
 
-  await env.DB.prepare(`DELETE FROM posts WHERE slug = ?`).bind(slug).run();
+  const postId = String((existing as Record<string, unknown>).id);
+  await env.DB.prepare(`DELETE FROM posts WHERE id = ?`).bind(postId).run();
 
   return jsonResponse({ success: true });
 }
@@ -340,8 +400,8 @@ export async function handlePostsRequest(request: Request, env: Env): Promise<Re
     return handleList(request, env);
   }
 
-  // GET /api/posts/:slug - get by slug
-  const getMatch = pathname.match(/^\/([a-z0-9-]+)$/);
+  // GET /api/posts/:slug - get by slug (supports Unicode slugs)
+  const getMatch = pathname.match(/^\/(.+)$/);
   if (method === 'GET' && getMatch) {
     return handleGetBySlug(request, env, getMatch[1]);
   }
@@ -373,6 +433,120 @@ export async function handleAdminPostsRequest(request: Request, env: Env): Promi
   // GET /api/admin/posts - list all posts including drafts
   if (method === 'GET' && (pathname === '/' || pathname === '')) {
     return handleAdminList(request, env);
+  }
+
+  // GET /api/admin/posts/by-id/:id - get post by internal UUID
+  const byIdMatch = pathname.match(/^\/by-id\/(.+)$/);
+  if (method === 'GET' && byIdMatch) {
+    const id = byIdMatch[1];
+    const user = await adminAuth(request, env);
+    if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+
+    const row = await env.DB
+      .prepare(`SELECT * FROM posts WHERE id = ?`)
+      .bind(id)
+      .first();
+
+    if (!row) return jsonResponse({ error: 'Post not found' }, 404);
+
+    const r = row as Record<string, unknown>;
+    const tagRows = await env.DB
+      .prepare(`SELECT t.name, t.slug FROM tags t JOIN post_tags pt ON t.id = pt.tag_id WHERE pt.post_id = ?`)
+      .bind(String(r.id))
+      .all();
+    const tags = (tagRows.results as { name: string; slug: string }[]).map(t => t.name);
+
+    const catRows = await env.DB
+      .prepare(`SELECT c.name, c.slug FROM categories c JOIN post_categories pc ON c.id = pc.category_id WHERE pc.post_id = ?`)
+      .bind(String(r.id))
+      .all();
+    const categories = (catRows.results as { name: string; slug: string }[]).map(c => c.name);
+
+    // Fetch author info
+    const authorId = r.author_id ? String(r.author_id) : null;
+    let authorName = 'Unknown';
+    let authorAvatar = '';
+    if (authorId) {
+      const userRow = await env.DB.prepare(`SELECT display_name, avatar_url FROM users WHERE id = ?`).bind(authorId).first() as { display_name: string; avatar_url: string } | null;
+      if (userRow) {
+        authorName = userRow.display_name || authorId;
+        authorAvatar = userRow.avatar_url || '';
+      }
+    }
+
+    return jsonResponse({
+      id: String(r.id),
+      post_num: r.post_num ? Number(r.post_num) : null,
+      title: String(r.title),
+      slug: String(r.slug || ''),
+      content: String(r.content || ''),
+      excerpt: r.excerpt ? String(r.excerpt) : '',
+      coverImage: r.cover_image ? String(r.cover_image) : '',
+      status: String(r.status),
+      publishedAt: r.published_at ? Number(r.published_at) : null,
+      createdAt: Number(r.created_at),
+      updatedAt: Number(r.updated_at),
+      author: { name: authorName, avatar: authorAvatar },
+      categories,
+      tags,
+    });
+  }
+
+  // GET /api/admin/posts/by-num/:num - get post by sequential number
+  const byNumMatch = pathname.match(/^\/by-num\/(\d+)$/);
+  if (method === 'GET' && byNumMatch) {
+    const num = Number(byNumMatch[1]);
+    const user = await adminAuth(request, env);
+    if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
+
+    const row = await env.DB
+      .prepare(`SELECT * FROM posts WHERE post_num = ?`)
+      .bind(num)
+      .first();
+
+    if (!row) return jsonResponse({ error: 'Post not found' }, 404);
+
+    const r = row as Record<string, unknown>;
+    const tagRows = await env.DB
+      .prepare(`SELECT t.name, t.slug FROM tags t JOIN post_tags pt ON t.id = pt.tag_id WHERE pt.post_id = ?`)
+      .bind(String(r.id))
+      .all();
+    const tags = (tagRows.results as { name: string; slug: string }[]).map(t => t.name);
+
+    const catRows = await env.DB
+      .prepare(`SELECT c.name, c.slug FROM categories c JOIN post_categories pc ON c.id = pc.category_id WHERE pc.post_id = ?`)
+      .bind(String(r.id))
+      .all();
+    const categories = (catRows.results as { name: string; slug: string }[]).map(c => c.name);
+
+    // Fetch author info
+    const authorId = r.author_id ? String(r.author_id) : null;
+    let authorName = 'Unknown';
+    let authorAvatar = '';
+    if (authorId) {
+      const userRow = await env.DB.prepare(`SELECT display_name, avatar_url FROM users WHERE id = ?`).bind(authorId).first() as { display_name: string; avatar_url: string } | null;
+      if (userRow) {
+        authorName = userRow.display_name || authorId;
+        authorAvatar = userRow.avatar_url || '';
+      }
+    }
+
+    return jsonResponse({
+      id: String(r.id),
+      post_num: r.post_num ? Number(r.post_num) : null,
+      title: String(r.title),
+      slug: String(r.slug || ''),
+      content: String(r.content || ''),
+      excerpt: r.excerpt ? String(r.excerpt) : '',
+      coverImage: r.cover_image ? String(r.cover_image) : '',
+      status: String(r.status),
+      publishedAt: r.published_at ? Number(r.published_at) : null,
+      createdAt: Number(r.created_at),
+      updatedAt: Number(r.updated_at),
+      author: { name: authorName, avatar: authorAvatar },
+      categories,
+      tags,
+    });
   }
 
   return jsonResponse({ error: 'Not found' }, 404);

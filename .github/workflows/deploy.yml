@@ -1,0 +1,83 @@
+name: Deploy CloudBlog
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  init-db:
+    name: Initialize D1 Database
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Inject D1 Database ID into wrangler.toml
+        run: |
+          sed -i 's/{{D1_DATABASE_ID}}/'${{ vars.D1_DATABASE_ID }}'/g' wrangler.toml
+          sed -i 's/{{KV_IMPORT_ID}}/'${{ vars.KV_IMPORT_ID }}'/g' wrangler.toml
+          sed -i 's/{{KV_SEARCH_ID}}/'${{ vars.KV_SEARCH_ID }}'/g' wrangler.toml
+          echo "✅ Resource IDs injected into wrangler.toml"
+          cat wrangler.toml
+
+      - name: Apply D1 schema (production)
+        run: npx wrangler d1 execute cloudblog-db --remote --env production --file=./src/db/schema.sql
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  deploy-worker:
+    name: Deploy CloudBlog Worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: init-db
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Inject resource IDs into wrangler.toml
+        run: |
+          sed -i 's/{{D1_DATABASE_ID}}/'${{ vars.D1_DATABASE_ID }}'/g' wrangler.toml
+          sed -i 's/{{KV_IMPORT_ID}}/'${{ vars.KV_IMPORT_ID }}'/g' wrangler.toml
+          sed -i 's/{{KV_SEARCH_ID}}/'${{ vars.KV_SEARCH_ID }}'/g' wrangler.toml
+
+      - name: Set Cloudflare API Secret
+        run: echo "$API_SECRET" | npx wrangler secret put API_SECRET --env production
+        env:
+          API_SECRET: ${{ secrets.CLOUDFLARE_API_SECRET }}
+
+      - name: Deploy to Cloudflare Workers
+        run: npx wrangler deploy --env production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Deploy Status
+        run: |
+          echo "✅ CloudBlog deployed successfully"
+          echo "🌐 Access your blog via Cloudflare Workers dashboard"
