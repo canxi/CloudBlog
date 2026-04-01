@@ -372,13 +372,26 @@ async function handleDelete(request: Request, env: Env, slug: string): Promise<R
     decodedSlug = next;
   }
 
-  // If slug looks like a number, look up by post_num
+  // If slug looks like a number, look up by post_num first, then fallback to slug
   const num = parseInt(decodedSlug);
   let existing;
   if (!isNaN(num) && String(num) === decodedSlug) {
+    // Try post_num first
     existing = await env.DB.prepare(`SELECT id FROM posts WHERE post_num = ?`).bind(num).first();
+    // Fallback to slug if post_num not found (handles slugs like "123")
+    if (!existing) {
+      existing = await env.DB.prepare(`SELECT id FROM posts WHERE slug = ?`).bind(decodedSlug).first();
+    }
   } else {
     existing = await env.DB.prepare(`SELECT id FROM posts WHERE slug = ?`).bind(decodedSlug).first();
+    // Fallback: if slug was "null" or empty, try IS NULL (posts created without slug)
+    if (!existing && (decodedSlug === 'null' || decodedSlug === '')) {
+      existing = await env.DB.prepare(`SELECT id FROM posts WHERE slug IS NULL LIMIT 1`).first();
+    }
+    // Fallback: if slug looks like a UUID, try looking up by id
+    if (!existing && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(decodedSlug)) {
+      existing = await env.DB.prepare(`SELECT id FROM posts WHERE id = ?`).bind(decodedSlug).first();
+    }
   }
   if (!existing) {
     return jsonResponse({ error: 'Post not found' }, 404);

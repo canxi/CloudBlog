@@ -90,6 +90,10 @@
     .comment-meta { display: flex; gap: 8px; margin-bottom: 8px; }
     .comment-meta input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; }
     .comment-meta input:focus { outline: none; border-color: var(--primary); }
+    .comment-meta input.error { border-color: #ef4444; }
+    .comment-input.error { border-color: #ef4444; }
+    .field-error { color: #ef4444; font-size: 12px; margin-top: -4px; margin-bottom: 8px; display: none; }
+    .field-error.show { display: block; }
     .btn { padding: 8px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; }
     .btn-primary { background: var(--primary); color: white; }
     .btn-primary:hover { background: #2563eb; }
@@ -221,11 +225,18 @@
         <div class="comment-form" id="commentForm">
           <h4>发表评论</h4>
           <div class="comment-meta">
-            <input type="text" id="commentAuthor" placeholder="昵称" maxlength="100">
-            <input type="email" id="commentEmail" placeholder="邮箱（不公开）" maxlength="254">
+            <div style="flex:1">
+              <input type="text" id="commentAuthor" placeholder="昵称" maxlength="100">
+              <div class="field-error" id="authorError">请输入昵称</div>
+            </div>
+            <div style="flex:1">
+              <input type="email" id="commentEmail" placeholder="邮箱（不公开）" maxlength="254">
+              <div class="field-error" id="emailError">请输入有效的邮箱地址</div>
+            </div>
           </div>
           <textarea id="commentContent" class="comment-input" placeholder="写下你的评论..." maxlength="2000"></textarea>
-          <button class="btn btn-primary" id="submitComment" onclick="submitComment()">发表评论</button>
+          <div class="field-error" id="contentError" style="margin-bottom:8px">评论内容至少5个字符</div>
+          <button class="btn btn-primary" id="submitComment" onclick="submitComment()" disabled>发表评论</button>
         </div>
         <div id="commentsList" class="comments-list"></div>
       </div>
@@ -406,13 +417,72 @@
     `).join('');
   }
 
+    // Validation helpers
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  function validateAuthor() {
+    const author = document.getElementById('commentAuthor').value.trim();
+    const error = document.getElementById('authorError');
+    const input = document.getElementById('commentAuthor');
+    if (!author) {
+      error.classList.add('show');
+      input.classList.add('error');
+      return false;
+    }
+    error.classList.remove('show');
+    input.classList.remove('error');
+    return true;
+  }
+
+  function validateEmail() {
+    const email = document.getElementById('commentEmail').value.trim();
+    const error = document.getElementById('emailError');
+    const input = document.getElementById('commentEmail');
+    if (!email || !emailRegex.test(email)) {
+      error.classList.add('show');
+      input.classList.add('error');
+      return false;
+    }
+    error.classList.remove('show');
+    input.classList.remove('error');
+    return true;
+  }
+
+  function validateContent() {
+    const content = document.getElementById('commentContent').value.trim();
+    const error = document.getElementById('contentError');
+    const input = document.getElementById('commentContent');
+    if (!content || content.length < 5) {
+      error.classList.add('show');
+      input.classList.add('error');
+      return false;
+    }
+    error.classList.remove('show');
+    input.classList.remove('error');
+    return true;
+  }
+
+  function validateForm() {
+    const isAuthorValid = validateAuthor();
+    const isEmailValid = validateEmail();
+    const isContentValid = validateContent();
+    const btn = document.getElementById('submitComment');
+    btn.disabled = !(isAuthorValid && isEmailValid && isContentValid);
+  }
+
+  // Real-time validation on input
+  document.getElementById('commentAuthor').addEventListener('input', validateForm);
+  document.getElementById('commentEmail').addEventListener('input', validateForm);
+  document.getElementById('commentContent').addEventListener('input', validateForm);
+
   async function submitComment() {
+    // Final validation before submit
     const author = document.getElementById('commentAuthor').value.trim();
     const email = document.getElementById('commentEmail').value.trim();
     const content = document.getElementById('commentContent').value.trim();
 
-    if (!author || !email || !content) {
-      showToast('请填写昵称、邮箱和评论内容');
+    if (!author || !email || !content || !emailRegex.test(email) || content.length < 5) {
+      showToast('请检查表单填写是否正确');
       return;
     }
 
@@ -430,6 +500,10 @@
       if (res.ok) {
         showToast('评论已提交，等待审核');
         document.getElementById('commentContent').value = '';
+        // Reset validation state
+        document.getElementById('commentAuthor').value = '';
+        document.getElementById('commentEmail').value = '';
+        validateForm();
       } else {
         const err = await res.json();
         showToast(err.error || '提交失败');

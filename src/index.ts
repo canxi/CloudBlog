@@ -14,7 +14,7 @@ import { handleInitRequest } from './routes/init';
 import { handleAuthRequest } from './routes/auth';
 import { handleCORS, checkRateLimit, getCorsHeaders } from './utils/security';
 
-const STATIC_EXTENSIONS = ['.js', '.css', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.woff', '.woff2', '.ttf', '.eot', '.map', '.txt'];
+const STATIC_EXTENSIONS = ['.js', '.css', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.woff', '.woff2', '.ttf', '.eot', '.map', '.txt', '.json'];
 
 // Inject site config (logo/footer) into HTML using env vars — no KV lookup needed
 function injectSiteConfig(html: string, env: Env): string {
@@ -226,6 +226,7 @@ export default {
 				url.pathname === '/admin'
 			) {
 				page = '/admin/login.html';
+			}
 			return serveStaticFile(page, env, request);
 		}
 

@@ -28,6 +28,33 @@ const COMMENT_RATE_KEY = 'cmt:rate:';
 const COMMENT_RATE_MAX = 10;
 const COMMENT_RATE_WINDOW = 3600; // 1 hour
 
+// Anti-spam: prevent rapid repeated comments from same IP
+const COMMENT_LAST_KEY = 'cmt:last:';
+const COMMENT_REPEAT_WINDOW = 60; // 60 seconds
+
+async function checkCommentRepeat(request: Request, env: Env): Promise<{ allowed: boolean; error?: string }> {
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const key = `${COMMENT_LAST_KEY}${ip}`;
+  try {
+    const lastStr = await env.IMPORT_KV.get(key);
+    if (lastStr) {
+      const lastTime = parseInt(lastStr, 10);
+      if (!isNaN(lastTime)) {
+        const now = Math.floor(Date.now() / 1000);
+        if (now - lastTime < COMMENT_REPEAT_WINDOW) {
+          return { allowed: false, error: '请勿连续评论，请稍后再试' };
+        }
+      }
+    }
+    // Update last comment time
+    const now = Math.floor(Date.now() / 1000);
+    await env.IMPORT_KV.put(key, String(now));
+    return { allowed: true };
+  } catch {
+    return { allowed: true }; // fail open
+  }
+}
+
 async function checkCommentRate(request: Request, env: Env): Promise<boolean> {
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   const key = `${COMMENT_RATE_KEY}${ip}`;
@@ -35,12 +62,12 @@ async function checkCommentRate(request: Request, env: Env): Promise<boolean> {
     const stored = await env.IMPORT_KV.get(key, 'json') as { count: number; resetAt: number } | null;
     const now = Math.floor(Date.now() / 1000);
     if (!stored || now > stored.resetAt) {
-      await env.IMPORT_KV.put(key, JSON.stringify({ count: 1, resetAt: now + COMMENT_RATE_WINDOW }), { expirationTtl: COMMENT_RATE_WINDOW + 10 });
+      await env.IMPORT_KV.put(key, JSON.stringify({ count: 1, resetAt: now + COMMENT_RATE_WINDOW }));
       return true;
     }
     if (stored.count >= COMMENT_RATE_MAX) return false;
     stored.count++;
-    await env.IMPORT_KV.put(key, JSON.stringify(stored), { expirationTtl: stored.resetAt - now + 10 });
+    await env.IMPORT_KV.put(key, JSON.stringify(stored));
     return true;
   } catch {
     return true; // fail open
@@ -52,9 +79,16 @@ function isSpam(content: string, author: string): boolean {
   return SPAM_KEYWORDS.some(kw => text.includes(kw));
 }
 
+function generateId(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
 function getGravatarUrl(email: string): string {
   // Simple hash for Gravatar
-  const hash = crypto.randomUUID().replace(/-/g, '').substring(0, 32);
+  const hash = generateId();
   return `https://www.gravatar.com/avatar/${hash}?d=identicon&s=80`;
 }
 
@@ -70,63 +104,73 @@ function jsonResponse(data: unknown, status = 200): Response {
 
 // POST /api/comments - Submit a comment (public)
 async function handleSubmit(request: Request, env: Env): Promise<Response> {
-  // Rate limit
-  const allowed = await checkCommentRate(request, env);
-  if (!allowed) {
-    return jsonResponse({ error: 'Too many comments. Please wait before posting again.' }, 429);
-  }
-
-  let body: { postSlug?: string; author?: string; email?: string; content?: string };
   try {
-    body = await request.json();
-  } catch {
-    return jsonResponse({ error: 'Invalid JSON' }, 400);
+    // Anti-spam: 60-second repeat check
+    const repeatCheck = await checkCommentRepeat(request, env);
+    if (!repeatCheck.allowed) {
+      return jsonResponse({ error: repeatCheck.error }, 429);
+    }
+
+    // Rate limit: max 10 comments per IP per hour
+    const allowed = await checkCommentRate(request, env);
+    if (!allowed) {
+      return jsonResponse({ error: 'Too many comments. Please wait before posting again.' }, 429);
+    }
+
+    let body: { postSlug?: string; author?: string; email?: string; content?: string };
+    try {
+      body = await request.json();
+    } catch {
+      return jsonResponse({ error: 'Invalid JSON' }, 400);
+    }
+
+    const { postSlug, author, email, content } = body;
+    if (!postSlug || !author || !email || !content) {
+      return jsonResponse({ error: 'Missing required fields' }, 400);
+    }
+
+    if (content.length > 2000) {
+      return jsonResponse({ error: 'Comment too long (max 2000 chars)' }, 400);
+    }
+
+    const status = isSpam(content, author) ? 'spam' : 'pending';
+    const ip = request.headers.get('CF-Connecting-IP') || undefined;
+    const userAgent = request.headers.get('User-Agent') || undefined;
+
+    const comment: Comment = {
+      id: generateId(),
+      postSlug,
+      author: author.slice(0, 100),
+      email: email.slice(0, 254),
+      content: content.slice(0, 2000),
+      avatar: getGravatarUrl(email),
+      status,
+      createdAt: new Date().toISOString(),
+      ip,
+      userAgent,
+    };
+
+    // Store in KV (list by post + global list)
+    const key = `comment:${comment.id}`;
+    await env.IMPORT_KV.put(key, JSON.stringify(comment));
+    
+    const postKey = `comments:post:${postSlug}`;
+    const postListStr = await env.IMPORT_KV.get(postKey);
+    const postList: string[] = postListStr ? JSON.parse(postListStr) : [];
+    postList.push(comment.id);
+    await env.IMPORT_KV.put(postKey, JSON.stringify(postList));
+
+    if (status === 'spam') {
+      return jsonResponse({ message: 'Comment submitted and will be reviewed' });
+    }
+
+    return jsonResponse({ 
+      message: 'Comment submitted and awaiting review',
+      id: comment.id,
+    });
+  } catch (err) {
+    return jsonResponse({ error: 'Internal error: ' + String(err) }, 500);
   }
-
-  const { postSlug, author, email, content } = body;
-  if (!postSlug || !author || !email || !content) {
-    return jsonResponse({ error: 'Missing required fields' }, 400);
-  }
-
-  if (content.length > 2000) {
-    return jsonResponse({ error: 'Comment too long (max 2000 chars)' }, 400);
-  }
-
-  const status = isSpam(content, author) ? 'spam' : 'pending';
-  const ip = request.headers.get('CF-Connecting-IP') || undefined;
-  const userAgent = request.headers.get('User-Agent') || undefined;
-
-  const comment: Comment = {
-    id: crypto.randomUUID(),
-    postSlug,
-    author: author.slice(0, 100),
-    email: email.slice(0, 254),
-    content: content.slice(0, 2000),
-    avatar: getGravatarUrl(email),
-    status,
-    createdAt: new Date().toISOString(),
-    ip,
-    userAgent,
-  };
-
-  // Store in KV (list by post + global list)
-  const key = `comment:${comment.id}`;
-  await env.IMPORT_KV.put(key, JSON.stringify(comment));
-  
-  const postKey = `comments:post:${postSlug}`;
-  const postListStr = await env.IMPORT_KV.get(postKey);
-  const postList: string[] = postListStr ? JSON.parse(postListStr) : [];
-  postList.push(comment.id);
-  await env.IMPORT_KV.put(postKey, JSON.stringify(postList));
-
-  if (status === 'spam') {
-    return jsonResponse({ message: 'Comment submitted and will be reviewed' });
-  }
-
-  return jsonResponse({ 
-    message: 'Comment submitted and awaiting review',
-    id: comment.id,
-  });
 }
 
 // GET /api/comments/:slug - Get approved comments for a post
