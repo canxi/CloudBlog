@@ -6,8 +6,11 @@
 import { handleMigrationRequest } from './routes/migration';
 import { handleSearchRequest } from './routes/search';
 import { handleMediaRequest } from './routes/media';
+import { handleUploadImageRequest } from './routes/upload';
+import { handleConfigRequest } from './routes/config';
 import { handleCommentsRequest } from './routes/comments';
 import { handlePostsRequest, handleAdminPostsRequest } from './routes/posts';
+import { handleAdminMigrateRequest } from './routes/admin-migrate';
 import { handleAuthRequest } from './routes/auth';
 import { handleCORS, checkRateLimit, getCorsHeaders } from './utils/security';
 
@@ -74,6 +77,9 @@ export default {
 		if (url.pathname.startsWith('/api/admin/posts')) {
 			return await handleAdminPostsRequest(request, env);
 		}
+		if (url.pathname.startsWith('/api/admin/migrate')) {
+			return await handleAdminMigrateRequest(request, env);
+		}
 		if (url.pathname.startsWith('/api/posts')) {
 			return await handlePostsRequest(request, env);
 		}
@@ -82,6 +88,27 @@ export default {
 		}
 		if (url.pathname.startsWith('/api/admin/media')) {
 			return await handleMediaRequest(request, env);
+		}
+		if (url.pathname === '/api/upload/image') {
+			return await handleUploadImageRequest(request, env);
+		}
+		if (url.pathname === '/api/config') {
+			return await handleConfigRequest(request, env);
+		}
+
+		// Serve R2 images at /images/:key (e.g., /images/articles/uuid.png)
+		if (url.pathname.startsWith('/images/')) {
+			const key = url.pathname.replace('/images/', '');
+			const object = await env.IMAGES_BUCKET.get(key);
+			if (!object) {
+				return new Response('Not found', { status: 404 });
+			}
+			const headers = new Headers();
+			headers.set('Content-Type', object.httpMetadata?.contentType || 'application/octet-stream');
+			headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+			headers.set('ETag', object.etag);
+			addSecurityHeaders(headers);
+			return new Response(object.body, { status: 200, headers });
 		}
 
 		// Health check
@@ -117,25 +144,28 @@ export default {
 			}
 		}
 
-		// Serve write.html for /write route (post editor)
-		if (url.pathname === '/write') {
+		// Serve /write.html for /write route (post editor)
+		if (url.pathname === '/write' || url.pathname === '/write.html') {
 			const writeRes = await fetch(`https://${url.hostname}/write.html`);
 			if (writeRes.ok) {
+				const body = await writeRes.text();
 				const headers = new Headers({ 'Content-Type': 'text/html; charset=utf-8' });
 				addSecurityHeaders(headers);
 				headers.set('Cache-Control', 'no-cache');
-				return new Response(writeRes.body, { status: 200, headers });
+				return new Response(body, { status: 200, headers });
 			}
 		}
 
-		// Serve post.html for /posts/:slug routes (article detail page)
-		if (url.pathname.startsWith('/posts/')) {
+		// Serve post.html for /posts/:num routes (article detail page by sequential number)
+		const postsMatch = url.pathname.match(/^\/posts\/(\d+)$/);
+		if (postsMatch) {
 			const postRes = await fetch(`https://${url.hostname}/post.html`);
 			if (postRes.ok) {
+				const body = await postRes.text();
 				const headers = new Headers({ 'Content-Type': 'text/html; charset=utf-8' });
 				addSecurityHeaders(headers);
 				headers.set('Cache-Control', 'no-cache');
-				return new Response(postRes.body, { status: 200, headers });
+				return new Response(body, { status: 200, headers });
 			}
 		}
 
@@ -144,23 +174,27 @@ export default {
 			let page = '/admin/index.html';
 			if (url.pathname === '/admin/login' || url.pathname === '/admin') {
 				page = '/admin/login.html';
+			} else if (url.pathname === '/admin/settings') {
+				page = '/admin/settings.html';
 			}
 			const adminRes = await fetch(`https://${url.hostname}${page}`);
 			if (adminRes.ok) {
+				const body = await adminRes.text();
 				const headers = new Headers({ 'Content-Type': 'text/html; charset=utf-8' });
 				addSecurityHeaders(headers);
 				headers.set('Cache-Control', 'no-cache');
-				return new Response(adminRes.body, { status: 200, headers });
+				return new Response(body, { status: 200, headers });
 			}
 		}
 
-		// SPA fallback: serve index.html for all other routes
+		// SPA fallback: serve index.html for root and unmatched routes
 		const indexRes = await fetch(`https://${url.hostname}/index.html`);
 		if (indexRes.ok) {
+			const body = await indexRes.text();
 			const headers = new Headers({ 'Content-Type': 'text/html; charset=utf-8' });
 			addSecurityHeaders(headers);
 			headers.set('Cache-Control', 'no-cache');
-			return new Response(indexRes.body, { status: 200, headers });
+			return new Response(body, { status: 200, headers });
 		}
 
 		return new Response('Not Found', { status: 404 });

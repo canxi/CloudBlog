@@ -3,9 +3,7 @@
 
 name = "cloudblog"
 main = "src/index.ts"
-compatibility_date = "2024-01-01"
-
-# 静态文件目录（包含 HTML/CSS/JS）
+compatibility_date = "2026-03-10"
 assets = "public"
 
 # 本地开发环境配置
@@ -21,22 +19,22 @@ r2_buckets = [
   { binding = "IMAGES_BUCKET", bucket_name = "cloudblog-images" }
 ]
 
-# 生产环境配置
+# 生产环境配置 (CI/CD 使用 GitHub Actions Variables 注入)
 [env.production]
 name = "cloudblog"
 
 [[env.production.kv_namespaces]]
 binding = "IMPORT_KV"
-id = "填入你的IMPORT_KV_ID"
+id = "在 GitHub Actions Variables 中配置 KV_IMPORT_ID"
 
 [[env.production.kv_namespaces]]
 binding = "SEARCH_KV"
-id = "填入你的SEARCH_KV_ID"
+id = "在 GitHub Actions Variables 中配置 KV_SEARCH_ID"
 
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "cloudblog-db"
-database_id = "填入你的D1数据库ID"
+database_id = "在 GitHub Actions Variables 中配置 D1_DATABASE_ID"
 
 [[env.production.r2_buckets]]
 binding = "IMAGES_BUCKET"

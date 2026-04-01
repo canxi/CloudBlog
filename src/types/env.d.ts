@@ -15,4 +15,7 @@ interface Env {
 
 	// R2 public URL (e.g., https://your-account.r2.cloudflarestorage.com/bucket)
 	R2_PUBLIC_URL?: string;
+
+	// CDN custom domain (e.g., cdn.yourdomain.com)
+	CDN_DOMAIN?: string;
 }

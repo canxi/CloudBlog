@@ -162,7 +162,50 @@ wrangler d1 execute cloudblog-db --local --file=./src/db/schema.sql
 
 ## 部署到生产环境
 
-### 方式一：Wrangler CLI 部署
+### 方式一：GitHub Actions 一键部署（推荐）
+
+推送代码到 `main` 分支即自动部署，全程无需手动操作。
+
+**配置步骤：**
+
+1. 在 GitHub 仓库 Settings → Secrets and variables → Actions 中添加以下 Secrets：
+
+| Secret 名称 | 说明 | 获取方式 |
+|-------------|------|----------|
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Account ID | Cloudflare Dashboard → 右上角头像 → 我的个人资料 → 复制账户 ID |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API Token | Cloudflare Dashboard → API Tokens → 创建自定义 Token（需 Worker、D1、KV、R2 权限）|
+
+2. 在 Cloudflare Dashboard 中提前创建好以下资源（首次手动，之后 CI 自动复用）：
+   - D1 数据库：`cloudblog-db`
+   - KV 命名空间：`IMPORT_KV`、`SEARCH_KV`
+   - R2 存储桶：`cloudblog-images`
+
+3. 在 GitHub 仓库 Settings → Variables → Actions 中添加以下 Variables：
+
+| Variable 名称 | 值 |
+|---------------|-----|
+| `D1_DATABASE_ID` | 你的 D1 数据库 ID（如 `4cc7dce4-1285-41a0-80ba-319759c59456`） |
+| `R2_BUCKET_NAME` | `cloudblog-images` |
+| `KV_IMPORT_ID` | IMPORT_KV 命名空间 ID |
+| `KV_SEARCH_ID` | SEARCH_KV 命名空间 ID |
+
+4. 推送代码到 `main` 分支，或在 GitHub Actions 页面手动触发 `Deploy CloudBlog` workflow。
+
+> **提示**：首次部署前，需先在本地执行一次数据库初始化：
+> ```bash
+> ./scripts/init-d1.sh remote production
+> ```
+> 之后 GitHub Actions 中的 `init-db` job 会自动维护表结构。
+
+**CI/CD 流程说明：**
+
+- `init-db` job：自动执行 `schema.sql` 创建/更新数据库表结构
+- `deploy` job：自动部署 Worker 到 Cloudflare
+- `full-deploy` job：串行执行，确保数据库就绪后再部署
+
+---
+
+### 方式二：Wrangler CLI 部署
 
 ```bash
 # 设置 Cloudflare API Token
