@@ -11,6 +11,7 @@ import { handleConfigRequest } from './routes/config';
 import { handleCommentsRequest } from './routes/comments';
 import { handlePostsRequest, handleAdminPostsRequest } from './routes/posts';
 import { handleAdminMigrateRequest } from './routes/admin-migrate';
+import { handleInitRequest } from './routes/init';
 import { handleAuthRequest } from './routes/auth';
 import { handleCORS, checkRateLimit, getCorsHeaders } from './utils/security';
 
@@ -86,8 +87,6 @@ function isStaticAsset(pathname: string): boolean {
   return STATIC_EXTENSIONS.includes(ext);
 }
 
-const STATIC_EXTENSIONS = ['.js', '.css', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.woff', '.woff2', '.ttf', '.eot', '.map'];
-
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
@@ -95,10 +94,6 @@ const SECURITY_HEADERS = {
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
 };
-
-function isStaticAsset(pathname: string): boolean {
-  return STATIC_EXTENSIONS.some(ext => pathname.includes(ext));
-}
 
 function addSecurityHeaders(headers: Headers): void {
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
@@ -142,6 +137,9 @@ export default {
 		}
 		if (url.pathname.startsWith('/api/migration')) {
 			return await handleMigrationRequest(request, env);
+		}
+		if (url.pathname === '/api/init') {
+			return await handleInitRequest(request, env);
 		}
 		if (url.pathname.startsWith('/api/search')) {
 			return await handleSearchRequest(request, env);

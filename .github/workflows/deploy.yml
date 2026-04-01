@@ -27,16 +27,37 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Inject D1 Database ID into wrangler.toml
+      - name: Inject resource IDs into wrangler.toml
         run: |
-          sed -i 's/{{D1_DATABASE_ID}}/'${{ vars.D1_DATABASE_ID }}'/g' wrangler.toml
-          sed -i 's/{{KV_IMPORT_ID}}/'${{ vars.KV_IMPORT_ID }}'/g' wrangler.toml
-          sed -i 's/{{KV_SEARCH_ID}}/'${{ vars.KV_SEARCH_ID }}'/g' wrangler.toml
+          sed -i 's/\${D1_DATABASE_ID}/'${{ vars.D1_DATABASE_ID }}'/g' wrangler.toml
+          sed -i 's/\${IMPORT_KV_ID}/'${{ vars.IMPORT_KV_ID }}'/g' wrangler.toml
+          sed -i 's/\${SEARCH_KV_ID}/'${{ vars.SEARCH_KV_ID }}'/g' wrangler.toml
+          sed -i 's/\${R2_BUCKET_NAME}/'${{ vars.R2_BUCKET_NAME }}'/g' wrangler.toml
           echo "✅ Resource IDs injected into wrangler.toml"
           cat wrangler.toml
 
       - name: Apply D1 schema (production)
         run: npx wrangler d1 execute cloudblog-db --remote --env production --file=./src/db/schema.sql
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Create admin user (if not exists)
+        run: |
+          npx wrangler d1 execute cloudblog-db --remote --env production --command="
+            INSERT INTO users (id, username, email, password_hash, display_name, role, must_change_password, created_at, updated_at)
+            SELECT 
+              lower(hex(randomblob(16))),
+              'admin',
+              'admin@cloudblog.local',
+              'plain:admin123',
+              'Administrator',
+              'admin',
+              1,
+              unixepoch(),
+              unixepoch()
+            WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin');
+          "
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -62,20 +83,52 @@ jobs:
 
       - name: Inject resource IDs into wrangler.toml
         run: |
-          sed -i 's/{{D1_DATABASE_ID}}/'${{ vars.D1_DATABASE_ID }}'/g' wrangler.toml
-          sed -i 's/{{KV_IMPORT_ID}}/'${{ vars.KV_IMPORT_ID }}'/g' wrangler.toml
-          sed -i 's/{{KV_SEARCH_ID}}/'${{ vars.KV_SEARCH_ID }}'/g' wrangler.toml
+          sed -i 's/\${D1_DATABASE_ID}/'${{ vars.D1_DATABASE_ID }}'/g' wrangler.toml
+          sed -i 's/\${IMPORT_KV_ID}/'${{ vars.IMPORT_KV_ID }}'/g' wrangler.toml
+          sed -i 's/\${SEARCH_KV_ID}/'${{ vars.SEARCH_KV_ID }}'/g' wrangler.toml
+          sed -i 's/\${R2_BUCKET_NAME}/'${{ vars.R2_BUCKET_NAME }}'/g' wrangler.toml
 
-      - name: Set Cloudflare API Secret
-        run: echo "$API_SECRET" | npx wrangler secret put API_SECRET --env production
+      - name: Set Cloudflare API Token
+        run: npx wrangler secret put CLOUDFLARE_API_TOKEN --env production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Set Cloudflare Account ID
+        run: npx wrangler secret put CLOUDFLARE_ACCOUNT_ID --env production
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Set Admin Username
+        run: npx wrangler secret put ADMIN_USERNAME --env production
+        env:
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+
+      - name: Set Admin Password
+        run: npx wrangler secret put ADMIN_PASSWORD --env production
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+
+      - name: Set API Secret
+        run: npx wrangler secret put API_SECRET --env production
         env:
           API_SECRET: ${{ secrets.CLOUDFLARE_API_SECRET }}
 
       - name: Deploy to Cloudflare Workers
-        run: npx wrangler deploy --env production
+        run: npx wrangler deploy --env production --var D1_DATABASE_ID=${{ vars.D1_DATABASE_ID }} --var IMPORT_KV_ID=${{ vars.IMPORT_KV_ID }} --var SEARCH_KV_ID=${{ vars.SEARCH_KV_ID }} --var R2_BUCKET_NAME=${{ vars.R2_BUCKET_NAME }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Initialize Admin User via API (if worker URL configured)
+        run: |
+          sleep 5
+          WORKER_URL="${{ vars.CLOUDFLARE_WORKER_URL }}"
+          if [ -n "$WORKER_URL" ]; then
+            curl -X POST "\$WORKER_URL/api/init"
+            echo "✅ Admin init called via /api/init"
+          else
+            echo "⚠️ CLOUDFLARE_WORKER_URL not set, admin created via D1 execute in init-db job"
+          fi
 
       - name: Deploy Status
         run: |

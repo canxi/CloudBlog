@@ -25,4 +25,8 @@ interface Env {
 	// Site config vars (plain text, set in wrangler.jsonc)
 	SITE_LOGO_TEXT: string;
 	SITE_FOOTER_TEXT: string;
+
+	// Admin credentials for initial setup (set via wrangler secret put)
+	ADMIN_USERNAME?: string;
+	ADMIN_PASSWORD?: string;
 }
