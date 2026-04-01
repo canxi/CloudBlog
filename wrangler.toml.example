@@ -19,23 +19,23 @@ r2_buckets = [
   { binding = "IMAGES_BUCKET", bucket_name = "cloudblog-images" }
 ]
 
-# 生产环境配置 (CI/CD 使用 GitHub Actions Variables 注入)
+# 生产环境配置 (CI/CD 使用 wrangler --var 注入)
 [env.production]
 name = "cloudblog"
 
 [[env.production.kv_namespaces]]
 binding = "IMPORT_KV"
-id = "在 GitHub Actions Variables 中配置 KV_IMPORT_ID"
+id = "${IMPORT_KV_ID}"  # 运行时通过 --var IMPORT_KV_ID=xxx 传入
 
 [[env.production.kv_namespaces]]
 binding = "SEARCH_KV"
-id = "在 GitHub Actions Variables 中配置 KV_SEARCH_ID"
+id = "${SEARCH_KV_ID}"  # 运行时通过 --var SEARCH_KV_ID=xxx 传入
 
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "cloudblog-db"
-database_id = "在 GitHub Actions Variables 中配置 D1_DATABASE_ID"
+database_id = "${D1_DATABASE_ID}"  # 运行时通过 --var D1_DATABASE_ID=xxx 传入
 
 [[env.production.r2_buckets]]
 binding = "IMAGES_BUCKET"
-bucket_name = "cloudblog-images"
+bucket_name = "${R2_BUCKET_NAME}"  # 运行时通过 --var R2_BUCKET_NAME=xxx 传入

@@ -1,11 +1,12 @@
 /**
  * Database initialization - Creates default admin user
  * Run via: wrangler d1 execute cloudblog --local --file=./src/routes/init.sql
+ * Or via HTTP: POST /api/init (after deployment)
  */
 
 export async function ensureAdminUser(env: Env): Promise<void> {
-  const ADMIN_USERNAME = 'admin';
-  const ADMIN_PASSWORD = 'admin123'; // Default password - should be changed after first login
+  const ADMIN_USERNAME = env.ADMIN_USERNAME || 'admin';
+  const ADMIN_PASSWORD = env.ADMIN_PASSWORD || 'admin123'; // Default password - should be changed after first login
 
   // Check if admin user exists
   const existing = await env.DB
@@ -46,4 +47,22 @@ export async function ensureAdminUser(env: Env): Promise<void> {
     `)
     .bind(adminId, ADMIN_USERNAME, 'admin@cloudblog.local', hashedPassword, 'Administrator', 'admin', 1, now, now)
     .run();
+}
+
+/**
+ * HTTP handler for /api/init
+ * Creates admin user if not exists
+ */
+export async function handleInitRequest(request: Request, env: Env): Promise<Response> {
+  if (request.method !== 'POST') {
+    return Response.json({ error: 'Method not allowed' }, { status: 405 });
+  }
+
+  try {
+    await ensureAdminUser(env);
+    return Response.json({ success: true, message: 'Admin user initialized' });
+  } catch (err) {
+    console.error('Init failed:', err);
+    return Response.json({ error: 'Init failed: ' + String(err) }, { status: 500 });
+  }
 }
